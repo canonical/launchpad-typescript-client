@@ -1,31 +1,12 @@
 {
-  "name": "@canonical/launchpad-typescript-client",
-  "version": "0.0.0",
-  "license": "LGPL-3.0-only",
-  "files": [
-    "COPYING",
-    "dist"
-  ],
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "name": "launchpad-typescript-workspace",
+  "private": true,
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "pnpm run clean && tsc -p tsconfig.build.json",
-    "prepack": "pnpm build",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint --max-warnings 0 src",
-    "format": "oxfmt src package.json tsconfig.json tsconfig.build.json .oxlintrc.json .oxfmtrc.json",
-    "format:check": "oxfmt --check src package.json tsconfig.json tsconfig.build.json .oxlintrc.json .oxfmtrc.json",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "oxlint packages",
+    "format": "oxfmt package.json pnpm-workspace.yaml .oxlintrc.json .oxfmtrc.json packages",
+    "format:check": "oxfmt --check package.json pnpm-workspace.yaml .oxlintrc.json .oxfmtrc.json packages",
     "check": "pnpm run lint && pnpm run format:check"
   },
   "devDependencies": {

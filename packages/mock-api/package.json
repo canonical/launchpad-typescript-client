@@ -1,0 +1,10 @@
+{
+  "name": "@canonical/launchpad-mock-api",
+  "version": "0.0.0",
+  "description": "Planned mock Launchpad API client with deterministic dummy data",
+  "license": "LGPL-3.0-only",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  }
+}
