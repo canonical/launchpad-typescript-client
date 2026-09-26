@@ -5,8 +5,3 @@ coverage/
 *.tsbuildinfo
 .env
 .env.*
-compose.local.yaml
-
-# Rockcraft build artefacts
-*.rock
-packdex-docker.tar
