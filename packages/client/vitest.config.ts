@@ -4,12 +4,13 @@ export default defineConfig({
   root: import.meta.dirname,
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tooling/*.test.ts"],
     testTimeout: 30_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
       exclude: [
+        "src/generated/**", // Upstream-generated contracts and validators.
         "src/testing/**", // Integration tests, not published runtime code.
         "**/*.test.ts",
         "**/index.ts", // Re-export-only package surface.

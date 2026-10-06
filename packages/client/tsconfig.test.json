@@ -6,6 +6,11 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["src/**/*.test.ts", "testing/**/*.ts", "vitest.config.ts"],
+  "include": [
+    "src/**/*.test.ts",
+    "testing/**/*.ts",
+    "tooling/*.test.ts",
+    "vitest.config.ts"
+  ],
   "exclude": []
 }
