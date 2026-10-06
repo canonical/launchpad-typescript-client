@@ -17,6 +17,28 @@ Its TypeScript scripts run with Node's native type stripping; `typecheck` also
 checks those scripts explicitly. Vitest runs source tests, while subprocesses
 exercise the real tooling and built package exports.
 
+## Raw requests
+
+```ts
+import { createLaunchpadClient } from "@canonical/launchpad-typescript-client";
+
+const client = createLaunchpadClient();
+const { data, response } = await client.requestRaw({ path: "launchpad" });
+// data is unknown until an explicit decoder is supplied.
+console.log(response.status);
+```
+
+`baseUrl` is the complete API prefix, not just an origin. Relative paths and
+absolute resource links cannot leave its origin or prefix. Redirects are not
+followed. Bodies use explicit JSON, form, or native Fetch encoding. Responses
+retain status and headers, but their bodies have already been consumed.
+
+Authentication defaults to anonymous. Cookie mode delegates cookie handling to
+the runtime; it does not create a Node cookie jar. OAuth1 uses a caller-supplied
+signer after serialization. Fetch is injectable. Network and abort failures
+propagate unchanged; HTTP and successful-response decoding failures have distinct
+error classes. No automatic retries or credential refresh are performed.
+
 ## Generate contracts offline
 
 `generate` consumes the saved snapshots without network requests. It generates

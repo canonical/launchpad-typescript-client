@@ -4,9 +4,23 @@
  */
 
 /**
- * Type-only resource and operation contracts; schemas are separate opt-in imports.
+ * Fetch client, HTTP errors, and type-only contracts; schemas are separate opt-in imports.
  * @module launchpad-typescript-client
  */
+export { createLaunchpadClient } from "./client/createLaunchpadClient.js";
+export type {
+  LaunchpadClient,
+  LaunchpadClientOptions,
+  LaunchpadAuth,
+  LaunchpadFieldValue,
+  LaunchpadFields,
+  LaunchpadRawBody,
+  LaunchpadRawRequest,
+  LaunchpadRequestOptions,
+  LaunchpadDecodeOptions,
+  LaunchpadResponse,
+} from "./types.js";
+export { LaunchpadApiError, LaunchpadDecodeError } from "./errors.js";
 export type {
   Operations,
   OperationId,
