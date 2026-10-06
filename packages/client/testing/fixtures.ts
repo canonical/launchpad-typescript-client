@@ -59,6 +59,9 @@ registerHooks({
 const { createLaunchpadClient } = await import("@canonical/launchpad-typescript-client");
 const client = createLaunchpadClient({ fetch: async () => Response.json({ ok: true }) });
 assert.deepEqual((await client.requestRaw({ path: "launchpad" })).data, { ok: true });
+const pages = client.pages({ start: 0, entries: ["first"] });
+assert.deepEqual((await pages.next()).value.entries, ["first"]);
+assert.equal((await pages.next()).done, true);
 `;
 
 export const dictionaryOpenApi = {

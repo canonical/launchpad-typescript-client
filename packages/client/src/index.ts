@@ -18,6 +18,8 @@ export type {
   LaunchpadRawRequest,
   LaunchpadRequestOptions,
   LaunchpadDecodeOptions,
+  LaunchpadPaginationOptions,
+  LaunchpadDecodedPaginationOptions,
   LaunchpadResponse,
 } from "./types.js";
 export { LaunchpadApiError, LaunchpadDecodeError } from "./errors.js";

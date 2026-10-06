@@ -67,6 +67,23 @@ const rawDecoded = client.requestRaw({ path: "resource" }, { decode: String });
 expectType<Equal<Data<typeof raw>, unknown>>();
 expectType<Equal<Data<typeof rawDecoded>, string>>();
 
+const firstPage = { start: 0, entries: ["1"] };
+const pages = client.pages(firstPage, { decodeEntry: Number });
+const items = client.items(firstPage, { decodeEntry: Number });
+const unknownPages = client.pages(firstPage);
+const unknownItems = client.items(firstPage);
+expectType<
+  Equal<typeof pages, AsyncIterableIterator<LaunchpadCollection<number>>>
+>();
+expectType<Equal<typeof items, AsyncIterableIterator<number>>>();
+expectType<
+  Equal<
+    typeof unknownPages,
+    AsyncIterableIterator<LaunchpadCollection<unknown>>
+  >
+>();
+expectType<Equal<typeof unknownItems, AsyncIterableIterator<unknown>>>();
+
 const transformedCollection = launchpadCollectionSchema(
   z.string().transform((value) => value.length),
 );

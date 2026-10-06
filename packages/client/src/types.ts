@@ -113,6 +113,22 @@ export interface LaunchpadDecodeOptions<T> extends LaunchpadRequestOptions {
 }
 
 /**
+ * Headers and cancellation shared by subsequent pagination requests.
+ * Undecoded entries remain unknown even when the envelope is valid.
+ */
+export type LaunchpadPaginationOptions = LaunchpadRequestOptions;
+
+/**
+ * Synchronous entry decoder applied to the first and every subsequent page.
+ * Unlike response decoders, entry decoder failures propagate unchanged.
+ */
+export interface LaunchpadDecodedPaginationOptions<
+  T,
+> extends LaunchpadPaginationOptions {
+  decodeEntry: (value: unknown) => T;
+}
+
+/**
  * Parsed data and HTTP metadata; the response body has already been consumed.
  * An empty body produces undefined, JSON null stays null, and text stays text.
  */
@@ -125,6 +141,12 @@ export interface LaunchpadResponse<T> {
  * Internal request settings reuse the public decoder without requiring it.
  */
 export type RequestSettings = Partial<LaunchpadDecodeOptions<unknown>>;
+/**
+ * Internal pagination settings reuse the optional public entry decoder.
+ */
+export type PaginationSettings = Partial<
+  LaunchpadDecodedPaginationOptions<unknown>
+>;
 
 /**
  * Transport payload after routing; generated form values remain unknown until
