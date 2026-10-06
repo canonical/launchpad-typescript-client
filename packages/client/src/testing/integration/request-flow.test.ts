@@ -12,7 +12,7 @@ import { zodFreeClientConsumer } from "../../../testing/fixtures.ts";
 const baseUrl = "https://example.test/api/devel/";
 
 describe("request flow", () => {
-  it("signs final raw wire requests without consuming their bodies", async () => {
+  it("signs final generated and raw wire requests without consuming their bodies", async () => {
     const signed: { request: Request; body: string }[] = [];
     const fetched: { request: Request; body: string }[] = [];
     const client = createLaunchpadClient({
@@ -30,6 +30,16 @@ describe("request flow", () => {
         return Response.json({ answer: "42" });
       },
     });
+    await client.request("branches-getByUrl", {
+      query: { url: "lp:project + branch" },
+    });
+    await client.request("bug-patch", {
+      path: { id: "1" },
+      body: { title: "changed" },
+    });
+    await client.request("bug_trackers-ensureBugTracker", {
+      body: { base_url: "https://bugs.example/", title: "Title + space" },
+    });
     const { data } = await client.requestRaw(
       {
         path: "values",
@@ -44,7 +54,7 @@ describe("request flow", () => {
       },
     );
     assert.equal(data, 42);
-    assert.equal(fetched.length, 1);
+    assert.equal(fetched.length, 4);
     for (const [index, outgoing] of fetched.entries()) {
       assert.equal(outgoing.request.url, signed[index].request.url);
       assert.equal(outgoing.body, signed[index].body);
@@ -57,13 +67,41 @@ describe("request flow", () => {
       assert.equal(outgoing.request.credentials, "omit");
       assert.equal(outgoing.request.headers.get("Accept"), "application/json");
     }
-    const rawUrl = new URL(fetched[0].request.url);
+    const branchUrl = new URL(fetched[0].request.url);
+    assert.equal(branchUrl.pathname, "/api/devel/branches");
+    assert.equal(branchUrl.searchParams.get("ws.op"), "getByUrl");
+    assert.equal(branchUrl.searchParams.get("url"), "lp:project + branch");
+    assert.equal(fetched[1].request.method, "PATCH");
+    assert.equal(fetched[1].request.url, `${baseUrl}bugs/1`);
+    assert.equal(fetched[1].body, '{"title":"changed"}');
+    assert.equal(
+      fetched[1].request.headers.get("Content-Type"),
+      "application/json",
+    );
+    assert.equal(fetched[2].request.method, "POST");
+    assert.equal(
+      new URL(fetched[2].request.url).searchParams.get("ws.op"),
+      "ensureBugTracker",
+    );
+    assert.equal(
+      fetched[2].request.headers.get("Content-Type"),
+      "application/x-www-form-urlencoded",
+    );
+    assert.equal(
+      new URLSearchParams(fetched[2].body).get("title"),
+      "Title + space",
+    );
+    assert.equal(
+      new URLSearchParams(fetched[2].body).get("base_url"),
+      "https://bugs.example/",
+    );
+    const rawUrl = new URL(fetched[3].request.url);
     assert.equal(rawUrl.searchParams.get("ids"), '["1","2"]');
     assert.equal(rawUrl.searchParams.get("unset"), "null");
     assert.equal(rawUrl.searchParams.has("missing"), false);
-    assert.equal(fetched[0].request.headers.get("X-Example"), "options");
+    assert.equal(fetched[3].request.headers.get("X-Example"), "options");
     assert.equal(
-      fetched[0].request.headers.get("Content-Type"),
+      fetched[3].request.headers.get("Content-Type"),
       "application/json",
     );
   });
