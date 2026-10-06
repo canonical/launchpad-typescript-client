@@ -4,9 +4,15 @@
  */
 
 /**
- * Shared resource types; runtime validation is available through the schemas subpath.
+ * Type-only resource and operation contracts; schemas are separate opt-in imports.
  * @module launchpad-typescript-client
  */
+export type {
+  Operations,
+  OperationId,
+  Input,
+  Output,
+} from "./generated/production/contracts.js";
 export type {
   LaunchpadResource,
   LaunchpadCollection,
