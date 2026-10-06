@@ -3,13 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate": "node generate.ts",
     "typecheck": "tsc -p tsconfig.json",
     "schema:update": "node update-schema.ts"
   },
   "devDependencies": {
     "@canonical/launchpad-openapi": "0.0.2",
+    "@hey-api/openapi-ts": "0.99.0",
+    "@hey-api/shared": "0.5.0",
     "@types/node": "^24.19.1",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "zod": "4.4.3"
   },
   "engines": {
     "node": ">=24"

@@ -14,9 +14,45 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./contracts": {
+      "types": "./dist/generated/production/contracts.d.ts",
+      "default": "./dist/generated/production/contracts.js"
+    },
+    "./contracts/production": {
+      "types": "./dist/generated/production/contracts.d.ts",
+      "default": "./dist/generated/production/contracts.js"
+    },
+    "./contracts/qastaging": {
+      "types": "./dist/generated/qastaging/contracts.d.ts",
+      "default": "./dist/generated/qastaging/contracts.js"
+    },
     "./schemas/primitives": {
       "types": "./dist/schemas/primitives.d.ts",
       "default": "./dist/schemas/primitives.js"
+    },
+    "./schemas/models/*": {
+      "types": "./dist/generated/production/schemas/models/*.gen.d.ts",
+      "default": "./dist/generated/production/schemas/models/*.gen.js"
+    },
+    "./schemas/operations/*": {
+      "types": "./dist/generated/production/schemas/operations/*.gen.d.ts",
+      "default": "./dist/generated/production/schemas/operations/*.gen.js"
+    },
+    "./schemas/production/models/*": {
+      "types": "./dist/generated/production/schemas/models/*.gen.d.ts",
+      "default": "./dist/generated/production/schemas/models/*.gen.js"
+    },
+    "./schemas/production/operations/*": {
+      "types": "./dist/generated/production/schemas/operations/*.gen.d.ts",
+      "default": "./dist/generated/production/schemas/operations/*.gen.js"
+    },
+    "./schemas/qastaging/models/*": {
+      "types": "./dist/generated/qastaging/schemas/models/*.gen.d.ts",
+      "default": "./dist/generated/qastaging/schemas/models/*.gen.js"
+    },
+    "./schemas/qastaging/operations/*": {
+      "types": "./dist/generated/qastaging/schemas/operations/*.gen.d.ts",
+      "default": "./dist/generated/qastaging/schemas/operations/*.gen.js"
     }
   },
   "publishConfig": {
@@ -26,6 +62,7 @@
     "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc -p tsconfig.build.json",
     "prepack": "pnpm build",
+    "generate": "npm --prefix tooling run generate",
     "schema:update": "node tooling/update-schema.ts",
     "pretest": "pnpm run build",
     "test": "vitest run",

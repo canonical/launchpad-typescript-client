@@ -5,3 +5,8 @@ coverage/
 *.tsbuildinfo
 .env
 .env.*
+
+# Generated client artifacts and generator scratch output.
+/packages/client/src/generated/
+/packages/client/tooling/.generation-*/
+openapi-ts-error-*.log
