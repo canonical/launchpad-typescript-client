@@ -1,3 +1,48 @@
+// Intentionally untyped JavaScript inputs exercise runtime checks, not TS errors.
+export const invalidClientOptions: readonly unknown[] = [
+  { baseUrl: null },
+  { baseUrl: "ftp://example.test/devel/" },
+  { baseUrl: "https://user:secret@example.test/devel/" },
+  { baseUrl: "https://example.test/devel/?" },
+  { baseUrl: "https://example.test/devel/#" },
+  { auth: null },
+  { auth: "cookie" },
+  { auth: { type: "unknown" } },
+  { auth: { type: "oauth1", signer: null } },
+  { fetch: null },
+];
+
+export const invalidRequestTargets = [
+  {},
+  { path: "one", resourceUrl: "https://example.test/api/devel/two" },
+  { resourceUrl: 42 },
+  { resourceUrl: "ftp://example.test/api/devel/" },
+  { resourceUrl: "https://example.test/api/devel/a b" },
+  { resourceUrl: "https://example.test/api/devel/%invalid" },
+  { path: 42 },
+  { path: "https://example.test/api/devel/" },
+  { path: " leading-space" },
+  { path: "control\u0001" },
+  { path: "back\\\\slash" },
+  { path: "delete\u007f" },
+  { path: "bad%escape" },
+  { path: "fragment#" },
+];
+
+export const zodFreeClientConsumer = `
+import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === "zod" || specifier.startsWith("zod/")) throw new Error("Transport imported Zod");
+    return nextResolve(specifier, context);
+  },
+});
+const { createLaunchpadClient } = await import("@canonical/launchpad-typescript-client");
+const client = createLaunchpadClient({ fetch: async () => Response.json({ ok: true }) });
+assert.deepEqual((await client.requestRaw({ path: "launchpad" })).data, { ok: true });
+`;
+
 export const dictionaryOpenApi = {
   openapi: "3.0.3",
   info: { title: "Dictionary boundaries", version: "1" },
