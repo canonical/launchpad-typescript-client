@@ -7,7 +7,7 @@
     "schema:update": "node update-schema.ts"
   },
   "devDependencies": {
-    "@canonical/launchpad-openapi": "0.0.2",
+    "@canonical/launchpad-openapi": "0.0.4",
     "@types/node": "^24.19.1",
     "typescript": "6.0.3"
   },

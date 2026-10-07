@@ -94701,6 +94701,123 @@
         ]
       }
     },
+    "/bugs/{id}?ws.op=addPresence": {
+      "post": {
+        "tags": [
+          "bug"
+        ],
+        "summary": "Add presence",
+        "description": "Add a bug presence to this bug. Provide exactly one of product, distribution, source_package_name or git_repository. A source_package_name may stand alone (naming an upstream package) or be paired with a distribution to name a distribution source package. product:The product this BugPresence relates to. distribution:The distribution this BugPresence relates to. source_package_name: The source package name (or its name as a string) this BugPresence relates to. git_repository:The git repository this BugPresence relates to. break_fix_data:A list of mappings, each with a 'break' and a 'fix' commit. user:The user that adds this bug presence.",
+        "operationId": "bug-addPresence",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "product": {
+                    "type": "string",
+                    "format": "uri",
+                    "x-lp-resource-type": "project",
+                    "description": "Product"
+                  },
+                  "distribution": {
+                    "type": "string",
+                    "format": "uri",
+                    "x-lp-resource-type": "distribution",
+                    "description": "Distribution"
+                  },
+                  "source_package_name": {
+                    "type": "string",
+                    "description": "Source package name"
+                  },
+                  "git_repository": {
+                    "type": "string",
+                    "format": "uri",
+                    "x-lp-resource-type": "git_repository",
+                    "description": "Git repository"
+                  },
+                  "break_fix_data": {
+                    "type": "string",
+                    "description": "Break-Fix data A list of mappings, each with a 'break' and a 'fix' commit.",
+                    "example": "break_fix_data"
+                  }
+                },
+                "required": [
+                  "break_fix_data"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The `id` segment of the bug resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          }
+        ]
+      }
+    },
+    "/bugs/{id}?ws.op=removePresence": {
+      "post": {
+        "tags": [
+          "bug"
+        ],
+        "summary": "Remove presence",
+        "description": "Remove a bug presence from the bug. bug_presence:The bug presence to be removed. user:The user that removes the bug presence.",
+        "operationId": "bug-removePresence",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bug_presence": {
+                    "type": "string",
+                    "format": "uri",
+                    "x-lp-resource-type": "bug_presence",
+                    "description": "Bug presence"
+                  }
+                },
+                "required": [
+                  "bug_presence"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The `id` segment of the bug resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "1"
+            }
+          }
+        ]
+      }
+    },
     "/bugs/{id}?ws.op=linkMergeProposal": {
       "post": {
         "tags": [
@@ -296765,6 +296882,12 @@
             "description": "The owner's IPerson",
             "nullable": true
           },
+          "presences_collection_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "bug_presence-page-resource",
+            "description": "List of break-fix presences for this bug."
+          },
           "private": {
             "oneOf": [
               {
@@ -296931,6 +297054,7 @@
           "number_of_duplicates",
           "other_users_affected_count_with_dupes",
           "owner_link",
+          "presences_collection_link",
           "private",
           "security_related",
           "subscriptions_collection_link",
@@ -297267,6 +297391,106 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/bug_nomination-full"
+            },
+            "example": []
+          }
+        },
+        "required": [
+          "start",
+          "entries"
+        ]
+      },
+      "bug_presence-full": {
+        "type": "object",
+        "properties": {
+          "self_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "bug_presence",
+            "description": "The canonical link to this resource."
+          },
+          "web_link": {
+            "description": "The canonical human-addressable web link to this resource."
+          },
+          "resource_type_link": {
+            "description": "The link to the WADL description of this resource."
+          },
+          "http_etag": {
+            "description": "The value of the HTTP ETag for this resource."
+          },
+          "break_fix_data": {
+            "description": "Break-Fix data A list of mappings, each with a 'break' and a 'fix' commit identifying where the vulnerability was introduced and where it was fixed."
+          },
+          "bug_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "bug",
+            "description": "Bug"
+          },
+          "distribution_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "distribution",
+            "description": "Distribution"
+          },
+          "git_repository_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "git_repository",
+            "description": "Git repository"
+          },
+          "product_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "project",
+            "description": "Product"
+          },
+          "source_package_name": {
+            "description": "Source package name"
+          }
+        },
+        "required": [
+          "break_fix_data",
+          "bug_link",
+          "distribution_link",
+          "git_repository_link",
+          "product_link",
+          "source_package_name"
+        ]
+      },
+      "bug_presence-diff": {
+        "type": "object"
+      },
+      "bug_presence-page": {
+        "type": "object",
+        "properties": {
+          "resource_type_link": {},
+          "total_size": {
+            "type": "integer"
+          },
+          "total_size_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "ScalarValue"
+          },
+          "start": {
+            "type": "integer",
+            "example": 1
+          },
+          "next_collection_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "bug_presence-page-resource"
+          },
+          "prev_collection_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "bug_presence-page-resource"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/bug_presence-full"
             },
             "example": []
           }
@@ -324581,7 +324805,9 @@
     }
   },
   "x-launchpad-route-coverage": {
-    "unresolved": [],
+    "unresolved": [
+      "bug_presence"
+    ],
     "schemaOnly": [
       "access_token_target",
       "bug_link_target",

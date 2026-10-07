@@ -296355,6 +296355,9 @@
           },
           "url": {
             "description": "Attachment URL"
+          },
+          "vulnerability_patches": {
+            "description": "Vulnerability patches A list of patches for the associated vulnerability. Each entry is a mapping with the patch 'name', its 'value' (the patch URL) and an optional 'comment'."
           }
         },
         "required": [
@@ -296363,7 +296366,8 @@
           "message_link",
           "title",
           "type",
-          "url"
+          "url",
+          "vulnerability_patches"
         ]
       },
       "bug_attachment-diff": {
@@ -296392,6 +296396,9 @@
               "Unspecified"
             ],
             "description": "Attachment Type The type of the attachment, for example Patch or Unspecified."
+          },
+          "vulnerability_patches": {
+            "description": "Vulnerability patches A list of patches for the associated vulnerability. Each entry is a mapping with the patch 'name', its 'value' (the patch URL) and an optional 'comment'."
           }
         }
       },
@@ -297849,6 +297856,9 @@
             "description": "Remote Bug Details Select the bug watch that represents this task in the relevant bug tracker. If none of the bug watches represents this particular bug task, leave it as (None). Linking the remote bug watch with the task in this way means that a change in the remote bug status will change the status of this bug task in Launchpad.",
             "nullable": true
           },
+          "channel": {
+            "description": "Package channel The channel as a list of track, risk and branch."
+          },
           "date_assigned": {
             "type": "string",
             "format": "date-time",
@@ -297967,6 +297977,9 @@
             "description": "True or False depending on whether or not there is more work required on this bug task.",
             "example": true
           },
+          "metadata": {
+            "description": "Metadata Metadata of the bug task."
+          },
           "milestone_link": {
             "type": "string",
             "format": "uri",
@@ -297980,6 +297993,22 @@
             "x-lp-resource-type": "person",
             "description": "The owner",
             "nullable": true
+          },
+          "package_type": {
+            "type": "string",
+            "enum": [
+              "Unknown",
+              "Generic",
+              "Snap",
+              "Charm",
+              "Rock",
+              "Python",
+              "Conda",
+              "Cargo",
+              "Maven"
+            ],
+            "description": "Package type",
+            "example": "Unknown"
           },
           "related_tasks_collection_link": {
             "type": "string",
@@ -298033,6 +298062,7 @@
           "bug_target_display_name",
           "bug_target_name",
           "bug_watch_link",
+          "channel",
           "date_assigned",
           "date_closed",
           "date_confirmed",
@@ -298048,8 +298078,10 @@
           "importance",
           "importance_explanation",
           "is_complete",
+          "metadata",
           "milestone_link",
           "owner_link",
+          "package_type",
           "related_tasks_collection_link",
           "status",
           "status_explanation",
@@ -303190,6 +303222,12 @@
             ],
             "description": "metadata CVE metadata."
           },
+          "references_collection_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "cve_reference-page-resource",
+            "description": "The set of CVE References for this CVE."
+          },
           "sequence": {
             "type": "string",
             "description": "Vulnerability Identifier The full identifier for this vulnerability (e.g. 'CVE-2024-12345', 'GHSA-2c6m-6gqh-6qg3').",
@@ -303228,6 +303266,7 @@
           "discovered_by",
           "display_name",
           "metadata",
+          "references_collection_link",
           "sequence",
           "status",
           "title",
@@ -303267,6 +303306,82 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/cve-full"
+            },
+            "example": []
+          }
+        },
+        "required": [
+          "start",
+          "entries"
+        ]
+      },
+      "cve_reference-full": {
+        "type": "object",
+        "properties": {
+          "self_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "cve_reference",
+            "description": "The canonical link to this resource."
+          },
+          "web_link": {
+            "description": "The canonical human-addressable web link to this resource."
+          },
+          "resource_type_link": {
+            "description": "The link to the WADL description of this resource."
+          },
+          "http_etag": {
+            "description": "The value of the HTTP ETag for this resource."
+          },
+          "content": {
+            "description": "Content"
+          },
+          "source": {
+            "description": "Source"
+          },
+          "url": {
+            "description": "URL"
+          }
+        },
+        "required": [
+          "content",
+          "source",
+          "url"
+        ]
+      },
+      "cve_reference-diff": {
+        "type": "object"
+      },
+      "cve_reference-page": {
+        "type": "object",
+        "properties": {
+          "resource_type_link": {},
+          "total_size": {
+            "type": "integer"
+          },
+          "total_size_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "ScalarValue"
+          },
+          "start": {
+            "type": "integer",
+            "example": 1
+          },
+          "next_collection_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "cve_reference-page-resource"
+          },
+          "prev_collection_link": {
+            "type": "string",
+            "format": "uri",
+            "x-lp-resource-type": "cve_reference-page-resource"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/cve_reference-full"
             },
             "example": []
           }
@@ -324472,6 +324587,7 @@
       "bug_link_target",
       "bug_target",
       "build_farm_job",
+      "cve_reference",
       "faq_target",
       "has_bugs",
       "git_target",
