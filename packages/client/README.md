@@ -28,16 +28,27 @@ const { data, response } = await client.requestRaw({ path: "launchpad" });
 console.log(response.status);
 ```
 
-`baseUrl` is the complete API prefix, not just an origin. Relative paths and
-absolute resource links cannot leave its origin or prefix. Redirects are not
-followed. Bodies use explicit JSON, form, or native Fetch encoding. Responses
-retain status and headers, but their bodies have already been consumed.
+`baseUrl` is the complete API prefix, not just an origin. Initial relative paths
+and absolute resource links must stay within its origin and prefix. Fetch follows
+redirects; redirected destinations are not checked against that boundary.
+Bodies use explicit JSON, form, or native Fetch encoding. Responses retain status
+and headers, but their bodies have already been consumed.
+
+Supplied query fields replace matching parameters in the target URL. Undefined
+fields leave existing parameters unchanged. Query/form scalar numbers must be
+finite; arrays retain JSON encoding.
+
+Responses are decoded as JSON or UTF-8 text. Binary response bodies are not
+preserved; an opt-in byte-preserving response mode is deferred. Native Fetch
+bodies can still upload binary data without text conversion.
 
 Authentication defaults to anonymous. Cookie mode delegates cookie handling to
 the runtime; it does not create a Node cookie jar. OAuth1 uses a caller-supplied
-signer after serialization. Fetch is injectable. Network and abort failures
-propagate unchanged; HTTP and successful-response decoding failures have distinct
-error classes. No automatic retries or credential refresh are performed.
+signer once after serialization of the initial request, not for redirected
+requests. Fetch is injectable and invoked without a receiver, so native browser
+Fetch needs no manual binding. Network and abort failures propagate unchanged;
+HTTP and successful-response decoding failures have distinct error classes.
+No automatic retries or credential refresh are performed.
 
 ## Generate contracts offline
 

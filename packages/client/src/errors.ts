@@ -4,7 +4,7 @@
  */
 
 /**
- * Non-2xx response, including redirects, with status, headers, and response body.
+ * Non-2xx final response, with status, headers, and response body.
  * The body is parsed JSON when available, otherwise text or undefined if empty.
  */
 export class LaunchpadApiError extends Error {

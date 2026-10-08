@@ -5,12 +5,29 @@
  * signatures cannot drift from the API. Schema-derived resource types live with
  * their schemas, not here.
  */
-import type { createLaunchpadClient } from "./client/createLaunchpadClient.js";
 
 /**
- * Client methods inferred from the factory; overloads have one source of truth.
+ * Fetch client whose raw response data remains unknown unless decoded.
+ * Fetch follows redirects; only the initial request target is confined.
  */
-export type LaunchpadClient = ReturnType<typeof createLaunchpadClient>;
+export interface LaunchpadClient {
+  /**
+   * Request an API-relative path or confined absolute resource URL.
+   * The decoder determines the data type; failures become LaunchpadDecodeError.
+   */
+  requestRaw<T>(
+    input: LaunchpadRawRequest,
+    settings: LaunchpadDecodeOptions<T>,
+  ): Promise<LaunchpadResponse<T>>;
+  /**
+   * Request an API-relative path or confined absolute resource URL without
+   * assuming an output schema. Returns parsed data and the consumed response.
+   */
+  requestRaw(
+    input: LaunchpadRawRequest,
+    settings?: LaunchpadRequestOptions,
+  ): Promise<LaunchpadResponse<unknown>>;
+}
 
 /**
  * Explicit authentication strategy, independent of the configured hostname.
@@ -26,7 +43,8 @@ export type LaunchpadAuth =
       /**
        * Sign a clone of the serialized request and return its Authorization header.
        * Reading the clone's body does not consume the outgoing request.
-       * @note Invoked once for each outgoing request, including pagination.
+       * @note Invoked once per client request, including pagination, not per
+       * Fetch redirect.
        */
       signer: (request: Request) => string | Promise<string>;
     };
@@ -45,14 +63,16 @@ export interface LaunchpadClientOptions {
    */
   auth?: LaunchpadAuth;
   /**
-   * Fetch implementation; defaults to the runtime's global Fetch.
+   * Fetch implementation, invoked without a receiver; defaults to the runtime's
+   * global Fetch. Native browser Fetch needs no manual binding.
    */
   fetch?: typeof globalThis.fetch;
 }
 
 /**
  * Query/form value: arrays are JSON-encoded, null becomes "null", and scalar
- * primitives become text. This is wire serialization, not schema validation.
+ * primitives become text. Scalar numbers must be finite; array members retain
+ * native JSON serialization. This is wire serialization, not schema validation.
  */
 export type LaunchpadFieldValue =
   | string
@@ -87,6 +107,7 @@ export type LaunchpadRawBody = EncodedBody<LaunchpadFields>;
 export type LaunchpadRawRequest = {
   method?: string;
   headers?: HeadersInit;
+  /** Supplied non-undefined fields replace matching parameters in the target URL. */
   query?: LaunchpadFields;
   body?: LaunchpadRawBody;
 } & (

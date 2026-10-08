@@ -53,7 +53,6 @@ describe("request flow", () => {
         "OAuth test-signature",
       );
       assert.equal(signed[index].request.headers.get("Authorization"), null);
-      assert.equal(outgoing.request.redirect, "manual");
       assert.equal(outgoing.request.credentials, "omit");
       assert.equal(outgoing.request.headers.get("Accept"), "application/json");
     }

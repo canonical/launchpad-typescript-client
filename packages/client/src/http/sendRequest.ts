@@ -1,5 +1,5 @@
 import { LaunchpadApiError, LaunchpadDecodeError } from "../errors.js";
-import appendFields from "../fields/appendFields.js";
+import setFields from "../fields/setFields.js";
 import type {
   LaunchpadAuth,
   LaunchpadRequestOptions,
@@ -35,7 +35,7 @@ function serializeBody(
     }
     case "form": {
       const form = new URLSearchParams();
-      appendFields(form, body.value);
+      setFields(form, body.value);
       headers.set("Content-Type", "application/x-www-form-urlencoded");
       return form.toString();
     }
@@ -61,7 +61,7 @@ function serializeRequest(
   const init: RequestInit & { duplex?: "half" } = {
     method: input.method === undefined ? "GET" : input.method,
     headers,
-    redirect: "manual",
+    redirect: "follow",
     credentials: auth.type === "cookie" ? "include" : "omit",
   };
   if (body !== undefined) init.body = body;
@@ -83,6 +83,7 @@ async function readResponse(
   response: Response,
   settings: RequestSettings,
 ): Promise<LaunchpadResponse<unknown>> {
+  // TODO: Add opt-in responseType: "arrayBuffer"; text decoding is not binary-safe.
   const text = await response.text();
   let data: unknown = text === "" ? undefined : text;
   if (
@@ -109,9 +110,10 @@ async function readResponse(
 /**
  * Serialize, optionally sign, and send a request through the shared Fetch pipeline.
  *
- * The URL must already be confined to the configured API prefix. Signing receives
- * a clone after serialization so reading its body cannot consume the outgoing
- * request. Redirects are not followed. Network and abort errors propagate unchanged.
+ * The initial URL must already be confined to the configured API prefix. Signing
+ * receives a clone after serialization so reading its body cannot consume the
+ * outgoing request. Fetch follows redirects without validating their destinations
+ * or invoking the signer again. Network and abort errors propagate unchanged.
  *
  * @returns Parsed data and the consumed response; decoding is opt-in.
  * @throws LaunchpadApiError for non-2xx responses, or LaunchpadDecodeError for
@@ -135,5 +137,6 @@ export default async function sendRequest(
     }
     outgoing.headers.set("Authorization", authorization);
   }
-  return readResponse(await transport.fetcher(outgoing), settings);
+  const { fetcher } = transport;
+  return readResponse(await fetcher(outgoing), settings);
 }

@@ -1,8 +1,9 @@
-import appendFields from "../fields/appendFields.js";
+import setFields from "../fields/setFields.js";
 import createTransport from "../http/createTransport.js";
 import resolveTarget from "../http/resolveTarget.js";
 import sendRequest from "../http/sendRequest.js";
 import type {
+  LaunchpadClient,
   LaunchpadClientOptions,
   LaunchpadDecodeOptions,
   LaunchpadRawRequest,
@@ -14,8 +15,9 @@ import type {
 /**
  * Create a Fetch client without importing a validation runtime.
  *
- * Raw data stays unknown unless decoded. Responses are consumed, redirects are
- * not followed, and absolute links cannot leave the configured API origin/prefix.
+ * Raw data stays unknown unless decoded, and responses are consumed. Initial
+ * targets cannot leave the configured API origin/prefix; Fetch follows redirects
+ * without validating their destinations.
  *
  * @param options - API prefix, authentication, and Fetch implementation. Defaults
  * to https://api.launchpad.net/devel/, anonymous auth, and the runtime's Fetch.
@@ -23,7 +25,9 @@ import type {
  * @throws TypeError for invalid configuration.
  * @note Reads runtime defaults; returned methods perform Fetch I/O.
  */
-export function createLaunchpadClient(options: LaunchpadClientOptions = {}) {
+export function createLaunchpadClient(
+  options: LaunchpadClientOptions = {},
+): LaunchpadClient {
   const transport = createTransport(options);
 
   /**
@@ -48,7 +52,7 @@ export function createLaunchpadClient(options: LaunchpadClientOptions = {}) {
     settings?: RequestSettings,
   ): Promise<LaunchpadResponse<unknown>> {
     const url = resolveTarget(transport.base, input);
-    appendFields(url.searchParams, input.query);
+    setFields(url.searchParams, input.query);
     return sendRequest(transport, url, input, settings);
   }
 
