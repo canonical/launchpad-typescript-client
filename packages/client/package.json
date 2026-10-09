@@ -1,8 +1,9 @@
 {
   "name": "@canonical/launchpad-typescript-client",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "LGPL-3.0-only",
   "files": [
+    "CHANGELOG.md",
     "COPYING",
     "dist"
   ],

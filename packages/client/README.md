@@ -1,6 +1,18 @@
 # Launchpad TypeScript client
 
-Requires Node.js 24 or newer. From the repository root:
+Requires Node.js 24 or newer.
+
+## Install
+
+```sh
+npm install @canonical/launchpad-typescript-client
+```
+
+See the [release notes](CHANGELOG.md) for changes and migration guidance.
+
+## Development
+
+From the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -99,6 +111,10 @@ no client-side field corrections or response coercion are applied.
 Contract and schema export paths have production aliases and explicit
 `production`/`qastaging` variants. Import schemas separately when runtime
 validation is required. The root exports types without loading Zod at runtime.
+Schema modules also export inferred types with validator-neutral names, such as
+`PersonFull`, `PersonDiff`, and `PersonPage`. Operation types retain role suffixes
+such as `ProjectGetPath` and `ProjectGetResponse`. Runtime schema names remain
+unchanged (for example, `zPersonFull`).
 
 ## Refresh snapshots explicitly
 
@@ -106,11 +122,11 @@ Refreshing invokes the upstream converter and may access the network. It is not
 part of the build or test workflow. From this package directory:
 
 ```sh
-pnpm schema:update -- --converter /path/to/launchpad-openapi
+pnpm schema:update --converter /path/to/launchpad-openapi
 # Limit a refresh to one environment:
-pnpm schema:update -- --environment qastaging --converter /path/to/launchpad-openapi
+pnpm schema:update --environment qastaging --converter /path/to/launchpad-openapi
 ```
 
-Without `--converter`, refresh uses the pinned registry converter 0.0.4. See
+Without `--converter`, refresh uses the pinned registry converter 0.0.6. See
 [snapshot provenance](schema/README.md) before refreshing. Production and
 qastaging outputs are imported verbatim and each receives its own source hash.

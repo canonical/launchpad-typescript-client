@@ -194,6 +194,27 @@ export default async function generateSchemas(
         compatibilityVersion: 4,
         dates: { offset: true },
         types: { infer: true },
+        definitions: {
+          types: { infer: { name: "{{name}}", case: "PascalCase" } },
+        },
+        requests: {
+          types: { infer: { name: "{{name}}Data", case: "PascalCase" } },
+          body: {
+            types: { infer: { name: "{{name}}Body", case: "PascalCase" } },
+          },
+          headers: {
+            types: { infer: { name: "{{name}}Headers", case: "PascalCase" } },
+          },
+          path: {
+            types: { infer: { name: "{{name}}Path", case: "PascalCase" } },
+          },
+          query: {
+            types: { infer: { name: "{{name}}Query", case: "PascalCase" } },
+          },
+        },
+        responses: {
+          types: { infer: { name: "{{name}}Response", case: "PascalCase" } },
+        },
         $resolvers: {
           /**
            * Emit strict or loose objects, retaining typed additional properties.
