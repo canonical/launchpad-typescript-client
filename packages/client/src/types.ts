@@ -10,9 +10,10 @@ import type {
   OperationId,
   Output,
 } from "./generated/production/contracts.js";
+import type { LaunchpadCollection } from "./schemas/primitives.js";
 
 /**
- * Fetch client with generated operation types and unknown raw response data.
+ * Fetch client with generated operation types, unknown raw data, and pagination.
  * Fetch follows redirects; only the initial request target is confined.
  */
 export interface LaunchpadClient {
@@ -50,6 +51,40 @@ export interface LaunchpadClient {
     input: LaunchpadRawRequest,
     settings?: LaunchpadRequestOptions,
   ): Promise<LaunchpadResponse<unknown>>;
+  /**
+   * Iterate validated collection pages, decoding entries on every page.
+   * Pass collection data, not a response wrapper; decoder failures propagate.
+   * @note Fetches subsequent pages lazily using the server's next links.
+   */
+  pages<T>(
+    firstPage: unknown,
+    settings: LaunchpadDecodedPaginationOptions<T>,
+  ): AsyncIterableIterator<LaunchpadCollection<T>>;
+  /**
+   * Iterate validated collection pages with unknown entries.
+   * @note Fetches subsequent pages lazily using the server's next links.
+   */
+  pages(
+    firstPage: unknown,
+    settings?: LaunchpadPaginationOptions,
+  ): AsyncIterableIterator<LaunchpadCollection<unknown>>;
+  /**
+   * Iterate decoded entries from collection data, including the first page.
+   * Decoder failures propagate unchanged.
+   * @note Fetches subsequent pages only as the consumer advances.
+   */
+  items<T>(
+    firstPage: unknown,
+    settings: LaunchpadDecodedPaginationOptions<T>,
+  ): AsyncIterableIterator<T>;
+  /**
+   * Iterate unknown entries from validated collection data.
+   * @note Fetches subsequent pages only as the consumer advances.
+   */
+  items(
+    firstPage: unknown,
+    settings?: LaunchpadPaginationOptions,
+  ): AsyncIterableIterator<unknown>;
 }
 
 /**
@@ -157,6 +192,22 @@ export interface LaunchpadDecodeOptions<T> extends LaunchpadRequestOptions {
 }
 
 /**
+ * Headers and cancellation shared by subsequent pagination requests.
+ * Undecoded entries remain unknown even when the envelope is valid.
+ */
+export type LaunchpadPaginationOptions = LaunchpadRequestOptions;
+
+/**
+ * Synchronous entry decoder applied to the first and every subsequent page.
+ * Unlike response decoders, entry decoder failures propagate unchanged.
+ */
+export interface LaunchpadDecodedPaginationOptions<
+  T,
+> extends LaunchpadPaginationOptions {
+  decodeEntry: (value: unknown) => T;
+}
+
+/**
  * Parsed data and HTTP metadata; the response body has already been consumed.
  * An empty body produces undefined, JSON null stays null, and text stays text.
  */
@@ -169,6 +220,12 @@ export interface LaunchpadResponse<T> {
  * Internal request settings reuse the public decoder without requiring it.
  */
 export type RequestSettings = Partial<LaunchpadDecodeOptions<unknown>>;
+/**
+ * Internal pagination settings reuse the optional public entry decoder.
+ */
+export type PaginationSettings = Partial<
+  LaunchpadDecodedPaginationOptions<unknown>
+>;
 
 /**
  * Transport payload after routing; generated form values remain unknown until

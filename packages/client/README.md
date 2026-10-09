@@ -72,6 +72,18 @@ Fetch needs no manual binding. Network and abort failures propagate unchanged;
 HTTP and successful-response decoding failures have distinct error classes.
 No automatic retries or credential refresh are performed.
 
+## Lazy pagination
+
+Pass collection `data`, not the `{ data, response }` wrapper, to `client.pages`
+or `client.items`. Both follow `next_collection_link` through the same transport
+and confinement checks. They reject malformed envelopes and link cycles, and
+fetch another page only when iteration advances past the current one.
+
+Entries remain unknown unless `decodeEntry` is supplied. That decoder applies
+to the first page and every subsequent page; its failures propagate unchanged.
+Breaking iteration does not prefetch another page. No offsets are synthesized
+and no total-size links are fetched automatically.
+
 ## Generate contracts offline
 
 `generate` consumes the saved snapshots without network requests. It generates

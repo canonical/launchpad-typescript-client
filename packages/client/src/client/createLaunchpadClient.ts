@@ -3,7 +3,9 @@ import type {
   OperationId,
   Output,
 } from "../generated/production/contracts.js";
+import iteratePages from "./iteratePages.js";
 import prepareOperation from "./prepareOperation.js";
+import type { LaunchpadCollection } from "../schemas/primitives.js";
 import setFields from "../fields/setFields.js";
 import createTransport from "../http/createTransport.js";
 import resolveTarget from "../http/resolveTarget.js";
@@ -12,9 +14,12 @@ import type {
   LaunchpadClient,
   LaunchpadClientOptions,
   LaunchpadDecodeOptions,
+  LaunchpadDecodedPaginationOptions,
+  LaunchpadPaginationOptions,
   LaunchpadRawRequest,
   LaunchpadRequestOptions,
   LaunchpadResponse,
+  PaginationSettings,
   RequestSettings,
 } from "../types.js";
 
@@ -28,7 +33,7 @@ import type {
  *
  * @param options - API prefix, authentication, and Fetch implementation. Defaults
  * to https://api.launchpad.net/devel/, anonymous auth, and the runtime's Fetch.
- * @returns Generated and raw request methods with optional decoding.
+ * @returns Generated/raw request methods and lazy page/entry iterators.
  * @throws TypeError for invalid configuration.
  * @note Reads runtime defaults; returned methods perform Fetch I/O.
  */
@@ -96,5 +101,54 @@ export function createLaunchpadClient(
     return sendRequest(transport, url, payload, settings);
   }
 
-  return { request, requestRaw };
+  /**
+   * Iterate collection pages, following the server's next links lazily.
+   *
+   * Pass collection data, not the HTTP response wrapper. Each envelope is checked;
+   * entries remain unknown unless decodeEntry is supplied. The decoder applies
+   * to the first page as well as fetched pages and its failures propagate unchanged.
+   *
+   * @throws TypeError for malformed envelopes, disallowed links, or link cycles.
+   * @note Fetches the next page only after iteration resumes past the current page.
+   */
+  function pages<T>(
+    firstPage: unknown,
+    settings: LaunchpadDecodedPaginationOptions<T>,
+  ): AsyncIterableIterator<LaunchpadCollection<T>>;
+  function pages(
+    firstPage: unknown,
+    settings?: LaunchpadPaginationOptions,
+  ): AsyncIterableIterator<LaunchpadCollection<unknown>>;
+  function pages(
+    firstPage: unknown,
+    settings?: PaginationSettings,
+  ): AsyncIterableIterator<LaunchpadCollection<unknown>> {
+    return iteratePages(transport, firstPage, settings);
+  }
+
+  /**
+   * Iterate entries from collection data using the same checks as pages().
+   *
+   * Entries remain unknown without decodeEntry. Breaking iteration does not fetch
+   * another page; cancellation is controlled by the supplied AbortSignal.
+   *
+   * @throws TypeError for malformed envelopes, disallowed links, or link cycles.
+   * @note Fetches subsequent pages only as the consumer advances.
+   */
+  function items<T>(
+    firstPage: unknown,
+    settings: LaunchpadDecodedPaginationOptions<T>,
+  ): AsyncIterableIterator<T>;
+  function items(
+    firstPage: unknown,
+    settings?: LaunchpadPaginationOptions,
+  ): AsyncIterableIterator<unknown>;
+  async function* items(
+    firstPage: unknown,
+    settings?: PaginationSettings,
+  ): AsyncIterableIterator<unknown> {
+    for await (const page of pages(firstPage, settings)) yield* page.entries;
+  }
+
+  return { request, requestRaw, pages, items };
 }
