@@ -17,6 +17,28 @@ Its TypeScript scripts run with Node's native type stripping; `typecheck` also
 checks those scripts explicitly. Vitest runs source tests, while subprocesses
 exercise the real tooling and built package exports.
 
+## Typed operation requests
+
+```ts
+import { createLaunchpadClient } from "@canonical/launchpad-typescript-client";
+
+const client = createLaunchpadClient();
+const { data } = await client.request("project-get", {
+  path: { project: "launchpad" },
+});
+console.log(data.display_name);
+```
+
+Generated operation IDs select input and documented output types. These types do
+not validate responses; supplying `decode` explicitly validates or transforms the
+result and overrides its inferred type. Undocumented outputs remain unknown.
+
+The root dispatcher uses production contracts. Changing `baseUrl` changes the
+transport destination, not its TypeScript contract. For qastaging-only contracts,
+use `requestRaw` with an explicit qastaging decoder. Paths and absolute resource
+URLs are alternative ways to address an operation; they cannot be combined.
+Fixed operation query arguments cannot be overridden.
+
 ## Raw requests
 
 ```ts
@@ -77,8 +99,6 @@ pnpm schema:update -- --converter /path/to/launchpad-openapi
 pnpm schema:update -- --environment qastaging --converter /path/to/launchpad-openapi
 ```
 
-Without `--converter`, refresh uses the pinned registry converter 0.0.2. That
-version predates the checked-in snapshots' semantic operation IDs; use the
-appropriate local upstream converter to preserve them. See
+Without `--converter`, refresh uses the pinned registry converter 0.0.4. See
 [snapshot provenance](schema/README.md) before refreshing. Production and
 qastaging outputs are imported verbatim and each receives its own source hash.

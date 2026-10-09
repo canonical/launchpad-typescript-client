@@ -29,6 +29,24 @@ export const invalidRequestTargets = [
   { path: "fragment#" },
 ];
 
+export const invalidOperationInputs = [
+  null,
+  [],
+  { path: null, body: {} },
+  {
+    path: { id: "1" },
+    resourceUrl: "https://example.test/api/devel/bugs/1",
+    body: {},
+  },
+  { path: {}, body: {} },
+  { path: { id: null }, body: {} },
+  { path: { id: "" }, body: {} },
+  { path: { id: [] }, body: {} },
+  { path: { id: "." }, body: {} },
+  { path: { id: ".." }, body: {} },
+  { path: { id: "1" } },
+];
+
 export const zodFreeClientConsumer = `
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";

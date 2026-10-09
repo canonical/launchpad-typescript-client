@@ -5,12 +5,35 @@
  * signatures cannot drift from the API. Schema-derived resource types live with
  * their schemas, not here.
  */
+import type {
+  Input,
+  OperationId,
+  Output,
+} from "./generated/production/contracts.js";
 
 /**
- * Fetch client whose raw response data remains unknown unless decoded.
+ * Fetch client with generated operation types and unknown raw response data.
  * Fetch follows redirects; only the initial request target is confined.
  */
 export interface LaunchpadClient {
+  /**
+   * Request a generated operation with an explicit decoder that overrides its
+   * documented output type. Decoder failures become LaunchpadDecodeError.
+   */
+  request<K extends OperationId, T>(
+    operationId: K,
+    input: Input<K>,
+    settings: LaunchpadDecodeOptions<T>,
+  ): Promise<LaunchpadResponse<T>>;
+  /**
+   * Request a generated operation using its documented input and output types.
+   * Responses are not validated; fixed operation arguments cannot be overridden.
+   */
+  request<K extends OperationId>(
+    operationId: K,
+    input: Input<K>,
+    settings?: LaunchpadRequestOptions,
+  ): Promise<LaunchpadResponse<Output<K>>>;
   /**
    * Request an API-relative path or confined absolute resource URL.
    * The decoder determines the data type; failures become LaunchpadDecodeError.

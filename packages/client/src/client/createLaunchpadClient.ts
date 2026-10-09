@@ -1,3 +1,9 @@
+import type {
+  Input,
+  OperationId,
+  Output,
+} from "../generated/production/contracts.js";
+import prepareOperation from "./prepareOperation.js";
 import setFields from "../fields/setFields.js";
 import createTransport from "../http/createTransport.js";
 import resolveTarget from "../http/resolveTarget.js";
@@ -15,13 +21,14 @@ import type {
 /**
  * Create a Fetch client without importing a validation runtime.
  *
- * Raw data stays unknown unless decoded, and responses are consumed. Initial
- * targets cannot leave the configured API origin/prefix; Fetch follows redirects
- * without validating their destinations.
+ * Generated requests infer documented output types without validating responses;
+ * raw data stays unknown unless decoded. Responses are consumed. Initial targets
+ * cannot leave the configured API origin/prefix; Fetch follows redirects without
+ * validating their destinations.
  *
  * @param options - API prefix, authentication, and Fetch implementation. Defaults
  * to https://api.launchpad.net/devel/, anonymous auth, and the runtime's Fetch.
- * @returns A raw request method with explicit body encoding and optional decoding.
+ * @returns Generated and raw request methods with optional decoding.
  * @throws TypeError for invalid configuration.
  * @note Reads runtime defaults; returned methods perform Fetch I/O.
  */
@@ -56,5 +63,38 @@ export function createLaunchpadClient(
     return sendRequest(transport, url, input, settings);
   }
 
-  return { requestRaw };
+  /**
+   * Request a generated operation using its path, query, and body contracts.
+   *
+   * The operation selects the documented output type but does not validate the
+   * response. An explicit decoder overrides that type and validates or transforms
+   * the data. Fixed operation parameters cannot be overridden by callers.
+   *
+   * @returns Parsed data and the consumed Fetch response.
+   * @note Performs Fetch I/O after resolving the generated request metadata.
+   */
+  function request<K extends OperationId, T>(
+    operationId: K,
+    input: Input<K>,
+    settings: LaunchpadDecodeOptions<T>,
+  ): Promise<LaunchpadResponse<T>>;
+  function request<K extends OperationId>(
+    operationId: K,
+    input: Input<K>,
+    settings?: LaunchpadRequestOptions,
+  ): Promise<LaunchpadResponse<Output<K>>>;
+  function request<K extends OperationId>(
+    operationId: K,
+    input: Input<K>,
+    settings?: RequestSettings,
+  ): Promise<LaunchpadResponse<unknown>> {
+    const { url, payload } = prepareOperation(
+      transport.base,
+      operationId,
+      input,
+    );
+    return sendRequest(transport, url, payload, settings);
+  }
+
+  return { request, requestRaw };
 }
