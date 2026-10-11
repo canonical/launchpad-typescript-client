@@ -14,10 +14,14 @@
   becomes `PersonFull`, for example. Operation types retain role suffixes such as
   `ProjectGetResponse`. Update imports from development checkouts accordingly;
   runtime schema names such as `zPersonFull` are unchanged.
-- Pin the OpenAPI converter to `@canonical/launchpad-openapi@0.0.6` and refresh
-  both environment snapshots with their actual converter provenance.
+- Pin the npm-published OpenAPI converter to
+  `@canonical/launchpad-openapi@0.0.6` and refresh both environment snapshots with
+  their actual converter provenance, retaining upstream operation IDs.
 
 ### Fixed
+
+- Reject operation-ID and generated-symbol collisions, identifying both source
+  definitions instead of silently numbering generated names.
 
 - Preserve upstream response nullability, including `bug_task.package_type`.
 - Accept file metadata arrays from `binaryFileUrls` and `sourceFileUrls` when

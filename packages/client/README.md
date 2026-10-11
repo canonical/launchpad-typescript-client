@@ -1,14 +1,9 @@
 # Launchpad TypeScript client
 
-Requires Node.js 24 or newer.
+Requires Node.js 24 or newer. This library is under development and has not been
+published yet.
 
-## Install
-
-```sh
-npm install @canonical/launchpad-typescript-client
-```
-
-See the [release notes](CHANGELOG.md) for changes and migration guidance.
+See the [changelog](CHANGELOG.md) for development notes.
 
 ## Development
 
@@ -27,7 +22,9 @@ pnpm --dir packages/client check
 The tooling package has a separate npm lockfile and pinned TypeScript compiler.
 Its TypeScript scripts run with Node's native type stripping; `typecheck` also
 checks those scripts explicitly. Vitest runs source tests, while subprocesses
-exercise the real tooling and built package exports.
+exercise the real tooling and built package exports. See the
+[generation workflow](tooling/README.md) for how snapshot provenance,
+generator adaptation, and output validation fit together.
 
 ## Typed operation requests
 
@@ -40,6 +37,14 @@ const { data } = await client.request("project-get", {
 });
 console.log(data.display_name);
 ```
+
+Operation IDs are string lookup keys imported unchanged from the upstream
+snapshot, not nested methods. The npm-published converter currently retains names
+such as `project-get` and `projects-new_project`; the
+[namespace-first naming convention](../../docs/adr/0001-namespace-first-naming-paths.md)
+requires an upstream converter release before it changes these contracts. URL
+segments, field names, and wire operation values also come from upstream metadata:
+`projects-new_project` sends `ws.op=new_project`.
 
 Generated operation IDs select input and documented output types. These types do
 not validate responses; supplying `decode` explicitly validates or transforms the
@@ -106,15 +111,17 @@ hashes. All derived artifacts are ignored by Git under `src/generated/`; run
 The generator stays on TypeScript 6.0.3 because the pinned Hey API version is not
 compatible with TypeScript 7 at runtime. The workspace compiler can still check
 the generated output. Contracts retain upstream operation IDs and unknown types;
-no client-side field corrections or response coercion are applied.
+no client-side field corrections or response coercion are applied. Generation
+rejects duplicate operation IDs and generated-name collisions with both source
+definitions, rather than silently assigning numeric suffixes.
 
 Contract and schema export paths have production aliases and explicit
 `production`/`qastaging` variants. Import schemas separately when runtime
 validation is required. The root exports types without loading Zod at runtime.
 Schema modules also export inferred types with validator-neutral names, such as
-`PersonFull`, `PersonDiff`, and `PersonPage`. Operation types retain role suffixes
-such as `ProjectGetPath` and `ProjectGetResponse`. Runtime schema names remain
-unchanged (for example, `zPersonFull`).
+`PersonFull`, `PersonDiff`, and `PersonPage`. Operation types include role suffixes
+such as `ProjectGetPath` and `ProjectGetResponse`. Runtime schema names use a `z`
+prefix, for example `zPersonFull`.
 
 ## Refresh snapshots explicitly
 
@@ -122,11 +129,14 @@ Refreshing invokes the upstream converter and may access the network. It is not
 part of the build or test workflow. From this package directory:
 
 ```sh
-pnpm schema:update --converter /path/to/launchpad-openapi
+pnpm schema:update
 # Limit a refresh to one environment:
-pnpm schema:update --environment qastaging --converter /path/to/launchpad-openapi
+pnpm schema:update --environment qastaging
+# Explicitly select a local upstream checkout instead:
+pnpm schema:update --converter /path/to/launchpad-openapi
 ```
 
-Without `--converter`, refresh uses the pinned registry converter 0.0.6. See
-[snapshot provenance](schema/README.md) before refreshing. Production and
-qastaging outputs are imported verbatim and each receives its own source hash.
+By default, refresh uses the npm-published converter pinned in
+`tooling/package.json`. `--converter` explicitly selects a local upstream checkout.
+Production and qastaging outputs are imported verbatim, with the converter version
+and source hash recorded for each snapshot. See [snapshot provenance](schema/README.md).
