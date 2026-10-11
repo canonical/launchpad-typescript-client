@@ -2,6 +2,8 @@
 
 Read the applicable guides in [docs/code-standards/](docs/code-standards/). Consult [docs/tooling/better-result.md](docs/tooling/better-result.md) when changing error handling.
 
+ADR are located at [docs/adr](docs/adr).
+
 ## Related upstream repositories
 
 - [Launchpad server](https://code.launchpad.net/~launchpad/launchpad/+git/launchpad) is authoritative for server behavior, canonical URL traversal, exported Python interfaces, and registered JSON serialization contracts.
@@ -14,8 +16,10 @@ Read the applicable guides in [docs/code-standards/](docs/code-standards/). Cons
 - Fix transport, generation adaptation, or packaging defects in this client. Adaptation must preserve upstream semantics: do not invent missing types, relabel operation IDs, or maintain client-side field-correction registries.
 - After an upstream contract change, generate the corrected OpenAPI snapshot, import it verbatim into the client, and regenerate types and schemas. Keep all OpenAPI-derived artifacts together in the generated output area; never hand-edit them.
 - Record the actual converter provenance when regenerating. The client's registry-based schema refresh uses its configured converter version; changes to the upstream converter do not automatically update that dependency or the client's checked-in snapshot.
+- Commit changes to `openapi.json` and `provenance.json` together in a dedicated commit, separate from all other code changes. Use the fixed commit subject `chore(schema): update OpenAPI snapshots and provenance`.
 
 ## Respect
+
 
 - Preserve WADL-derived semantics and produce valid OpenAPI 3.0.3; do not invent missing source information.
 - Keep changes in the owning module and follow existing domain boundaries and export conventions.
@@ -27,4 +31,4 @@ Read the applicable guides in [docs/code-standards/](docs/code-standards/). Cons
   independent QA checks the contract and actual behavior.
   Report verification. Do not commit or push unless explicitly requested.
 - Avoid including extra tests target every code bahavior, instead focus on meaningful tests
-
+- Avoid including inventory style documentation in the codebase, instead focus on meaningful documentation
