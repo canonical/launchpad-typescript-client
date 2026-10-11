@@ -20,7 +20,7 @@ describe("client boundaries", () => {
     ]) {
       await assert.rejects(
         async () =>
-          client.request("branches-getByPath", {
+          client.request("branches.getByPath", {
             resourceUrl: `${baseUrl}branches?ws.op=getByUrl`,
             query,
           }),

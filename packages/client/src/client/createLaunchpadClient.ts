@@ -3,7 +3,9 @@ import type {
   OperationId,
   Output,
 } from "../generated/production/contracts.js";
+import { operationPaths } from "../generated/production/operations.js";
 import iteratePages from "./iteratePages.js";
+import createOperationMethods from "./createOperationMethods.js";
 import prepareOperation from "./prepareOperation.js";
 import type { LaunchpadCollection } from "../schemas/primitives.js";
 import setFields from "../fields/setFields.js";
@@ -33,7 +35,8 @@ import type {
  *
  * @param options - API prefix, authentication, and Fetch implementation. Defaults
  * to https://api.launchpad.net/devel/, anonymous auth, and the runtime's Fetch.
- * @returns Generated/raw request methods and lazy page/entry iterators.
+ * @returns Generated/raw requests, nested methods for dotted upstream IDs, and
+ * lazy page/entry iterators.
  * @throws TypeError for invalid configuration.
  * @note Reads runtime defaults; returned methods perform Fetch I/O.
  */
@@ -150,5 +153,11 @@ export function createLaunchpadClient(
     for await (const page of pages(firstPage, settings)) yield* page.entries;
   }
 
-  return { request, requestRaw, pages, items };
+  return {
+    ...createOperationMethods(request, operationPaths),
+    request,
+    requestRaw,
+    pages,
+    items,
+  };
 }

@@ -138,6 +138,153 @@ export const referencedParameterOpenApi = {
   },
 };
 
+export const nestedOperationOpenApi = {
+  ...dictionaryOpenApi,
+  paths: {
+    ...dictionaryOpenApi.paths,
+    "/dictionary/{key}?ws.op=get_by_URL": {
+      get: {
+        ...referencedParameterOpenApi.paths["/dictionary/{key}"].get,
+        operationId: "dictionary.sourcePackage.self.getByUrl",
+      },
+    },
+    "/dictionaries?ws.op=new_dictionary": {
+      post: {
+        operationId: "dictionaries.newDictionary",
+        tags: ["dictionaries"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/x-www-form-urlencoded": {
+              schema: {
+                type: "object",
+                required: ["display_name"],
+                properties: { display_name: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: { 201: { description: "Created" } },
+      },
+    },
+    "/legacy": {
+      get: {
+        ...dictionaryOpenApi.paths["/dictionary"].get,
+        operationId: "legacy-get",
+      },
+    },
+    "/prototype-names": {
+      get: {
+        ...dictionaryOpenApi.paths["/dictionary"].get,
+        operationId: "constructor.toString.get",
+      },
+    },
+  },
+  components: referencedParameterOpenApi.components,
+};
+
+export const nestedRequestConsumer = `
+import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === "zod" || specifier.startsWith("zod/")) throw new Error("Transport imported Zod");
+    return nextResolve(specifier, context);
+  },
+});
+const { createLaunchpadClient, LaunchpadApiError, LaunchpadDecodeError } = await import("@canonical/launchpad-typescript-client");
+const fetched = [];
+const signed = [];
+let response;
+const client = createLaunchpadClient({
+  baseUrl: "https://example.test/api/devel/",
+  auth: { type: "oauth1", signer(request) { signed.push(request); return "OAuth test"; } },
+  fetch: async (request) => {
+    fetched.push({ request, body: await request.text() });
+    response = request.headers.get("X-Fail") ? Response.json({ error: "no" }, { status: 400 }) : Response.json({ answer: 42 });
+    return response;
+  },
+});
+const input = { path: { key: "name + value" } };
+const plain = await client.dictionary.sourcePackage.self.getByUrl(input);
+assert.deepEqual(plain.data, { answer: 42 });
+assert.equal(plain.response, response);
+await client.request("dictionary.sourcePackage.self.getByUrl", input);
+assert.equal(fetched[0].request.url, fetched[1].request.url);
+assert.equal(fetched[0].request.url, "https://example.test/api/devel/dictionary/name%20%2B%20value?ws.op=get_by_URL");
+const get = client.dictionary.sourcePackage.self.getByUrl;
+const controller = new AbortController();
+const signal = controller.signal;
+const decoding = { factor: 2, decode(value) { return value.answer * this.factor; }, signal, headers: { "X-Option": "yes" } };
+assert.equal((await get({ resourceUrl: "https://example.test/api/devel/dictionary/key" }, decoding)).data, 84);
+assert.equal(fetched[2].request.headers.get("X-Option"), "yes");
+controller.abort();
+assert.equal(fetched[2].request.signal.aborted, true);
+await client.dictionaries.newDictionary({ body: { display_name: "A + B" } });
+assert.equal(fetched[3].request.method, "POST");
+assert.equal(new URL(fetched[3].request.url).searchParams.get("ws.op"), "new_dictionary");
+assert.equal(fetched[3].body, "display_name=A+%2B+B");
+assert.equal(fetched[3].request.headers.get("Content-Type"), "application/x-www-form-urlencoded");
+for (const [index, { request }] of fetched.entries()) {
+  assert.equal(request.url, signed[index].url);
+  assert.equal(request.headers.get("Authorization"), "OAuth test");
+}
+assert.deepEqual((await client.dictionary.get({})).data, { answer: 42 });
+assert.deepEqual((await client.constructor.toString.get({})).data, { answer: 42 });
+assert.equal(client.legacy, undefined);
+await client.request("legacy-get", {});
+const cause = new Error("decoder rejected");
+await assert.rejects(get(input, { decode() { throw cause; } }), error => {
+  assert.ok(error instanceof LaunchpadDecodeError);
+  assert.equal(error.cause, cause);
+  assert.equal(error.response, response);
+  return true;
+});
+await assert.rejects(get(input, { headers: { "X-Fail": "yes" } }), LaunchpadApiError);
+const before = fetched.length;
+assert.throws(() => get({ resourceUrl: "https://elsewhere.test/api/devel/key" }), TypeError);
+assert.throws(() => get({ ...input, query: { "ws.op": "other" } }), TypeError);
+assert.equal(fetched.length, before);
+`;
+
+export const nestedRequestTypeConsumer = `
+import { createLaunchpadClient, type LaunchpadClient, type LaunchpadResponse } from "@canonical/launchpad-typescript-client";
+import type { Input, Output } from "@canonical/launchpad-typescript-client/contracts";
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Data<R extends Promise<LaunchpadResponse<unknown>>> = Awaited<R>["data"];
+declare function expectType<T extends true>(): T;
+const client: LaunchpadClient = createLaunchpadClient();
+const input: Input<"dictionary.sourcePackage.self.getByUrl"> = { path: { key: "name" } };
+const plain = client.dictionary.sourcePackage.self.getByUrl(input);
+const withOptions = client.dictionary.sourcePackage.self.getByUrl(input, { headers: {} });
+const decoded = client.dictionary.sourcePackage.self.getByUrl(input, { decode: String });
+const absolute = client.dictionary.sourcePackage.self.getByUrl({ resourceUrl: "https://example.test/devel/dictionary/name" });
+expectType<Equal<Data<typeof plain>, Output<"dictionary.sourcePackage.self.getByUrl">>>();
+expectType<Equal<Data<typeof withOptions>, Output<"dictionary.sourcePackage.self.getByUrl">>>();
+expectType<Equal<Data<typeof decoded>, string>>();
+expectType<Equal<Data<typeof absolute>, Output<"dictionary.sourcePackage.self.getByUrl">>>();
+const noNamespace = client.dictionary.get({});
+expectType<Equal<Data<typeof noNamespace>, Output<"dictionary.get">>>();
+const unknown = client.dictionaries.newDictionary({ body: { display_name: "Name" } });
+expectType<Equal<Data<typeof unknown>, unknown>>();
+// @ts-expect-error Namespaces are not callable operations.
+client.dictionary.sourcePackage({});
+// @ts-expect-error No guessed singular alias.
+client.dictionary.newDictionary({ body: { display_name: "Name" } });
+// @ts-expect-error No guessed namespace for legacy IDs.
+client.legacy.get({});
+// @ts-expect-error Required generated inputs are preserved.
+client.dictionary.sourcePackage.self.getByUrl();
+// @ts-expect-error Path identifiers keep their generated types.
+client.dictionary.sourcePackage.self.getByUrl({ path: { key: 1 } });
+// @ts-expect-error Path and resource URL are mutually exclusive.
+client.dictionary.sourcePackage.self.getByUrl({ ...input, resourceUrl: "https://example.test/devel/key" });
+// @ts-expect-error Required form body is preserved.
+client.dictionaries.newDictionary({});
+// @ts-expect-error Arbitrary response types still require a decoder.
+client.dictionary.get<string>({});
+`;
+
 export const qastagingDictionaryOpenApi = {
   ...dictionaryOpenApi,
   servers: [{ url: "https://api.qastaging.launchpad.net/devel" }],

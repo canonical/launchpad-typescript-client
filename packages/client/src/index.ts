@@ -10,6 +10,8 @@
 export { createLaunchpadClient } from "./client/createLaunchpadClient.js";
 export type {
   LaunchpadClient,
+  LaunchpadOperationMethod,
+  LaunchpadOperationMethods,
   LaunchpadClientOptions,
   LaunchpadAuth,
   LaunchpadFieldValue,

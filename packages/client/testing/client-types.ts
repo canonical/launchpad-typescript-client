@@ -46,12 +46,12 @@ export function checkOperationInference<K extends OperationId>(
 // One real operation checks concrete call-site inference and schema/package wiring.
 // Expected input/output shapes still come from the generated contract.
 const projectPath = zProjectGetPath.parse({ project: "launchpad" });
-const validated = client.request("project-get", { path: projectPath });
-const absolute = client.request("project-get", {
+const validated = client.project.get({ path: projectPath });
+const absolute = client.request("project.get", {
   resourceUrl: "https://api.launchpad.net/devel/launchpad",
 });
-expectType<Equal<Data<typeof validated>, Output<"project-get">>>();
-expectType<Equal<Data<typeof absolute>, Output<"project-get">>>();
+expectType<Equal<Data<typeof validated>, Output<"project.get">>>();
+expectType<Equal<Data<typeof absolute>, Output<"project.get">>>();
 
 // Select an undocumented-output category from the contract, not a named endpoint.
 type UndocumentedOperation = {
@@ -99,9 +99,9 @@ client.requestRaw<string>({ path: "resource" });
 // @ts-expect-error Operation IDs remain a generated contract.
 client.request("not-an-operation", {});
 // @ts-expect-error An identifier must retain the generated path type.
-client.request("project-get", { path: { project: 1 } });
+client.project.get({ path: { project: 1 } });
 // @ts-expect-error resourceUrl and path cannot be combined.
-client.request("project-get", {
+client.request("project.get", {
   path: projectPath,
   resourceUrl: "https://api.launchpad.net/devel/launchpad",
 });

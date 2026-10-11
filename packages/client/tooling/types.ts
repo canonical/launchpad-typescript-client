@@ -76,6 +76,11 @@ export interface OperationMetadata {
   sourcePath: string;
 }
 
+/** A generated naming hierarchy whose leaves retain upstream operation IDs. */
+export interface OperationPathNamespace {
+  [component: string]: string | OperationPathNamespace;
+}
+
 /** Source operation bookkeeping enriched with bindings after schema generation. */
 export interface Operation extends OperationMetadata {
   /** Location in the adapted document; alternatives use generator-only keys. */

@@ -3,8 +3,6 @@
 Requires Node.js 24 or newer. This library is under development and has not been
 published yet.
 
-See the [changelog](CHANGELOG.md) for development notes.
-
 ## Development
 
 From the repository root:
@@ -32,19 +30,34 @@ generator adaptation, and output validation fit together.
 import { createLaunchpadClient } from "@canonical/launchpad-typescript-client";
 
 const client = createLaunchpadClient();
-const { data } = await client.request("project-get", {
+const { data } = await client.project.get({
   path: { project: "launchpad" },
 });
 console.log(data.display_name);
 ```
 
-Operation IDs are string lookup keys imported unchanged from the upstream
-snapshot, not nested methods. The npm-published converter currently retains names
-such as `project-get` and `projects-new_project`; the
-[namespace-first naming convention](../../docs/adr/0001-namespace-first-naming-paths.md)
-requires an upstream converter release before it changes these contracts. URL
-segments, field names, and wire operation values also come from upstream metadata:
-`projects-new_project` sends `ws.op=new_project`.
+Operation IDs are imported unchanged from the upstream snapshot. Dotted IDs
+also expose nested methods with the same inputs, options, decoder inference,
+and response wrapper as `request`:
+
+```ts
+const input = { path: { project: "launchpad" } };
+await client.project.get(input);
+// Equivalent to:
+await client.request("project.get", input);
+```
+
+Only dots declared in an upstream ID define this hierarchy; multiword components
+stay intact. Generation rejects operation/namespace conflicts such as
+`account.get` alongside `account.get.details`, and subjects that would replace
+`request`, `requestRaw`, `pages`, or `items`.
+
+The snapshots generated with `@canonical/launchpad-openapi@0.1.0` follow the
+[namespace-first convention](../../docs/adr/0001-namespace-first-naming-paths.md),
+including inherited contexts such as `accessToken.gitRepository.sourcePackage.get`.
+No names or namespaces are guessed by the client. URL segments, field names, and
+wire operation values still come from upstream metadata: `projects.newProject`
+sends `ws.op=new_project`.
 
 Generated operation IDs select input and documented output types. These types do
 not validate responses; supplying `decode` explicitly validates or transforms the

@@ -30,14 +30,14 @@ describe("request flow", () => {
         return Response.json({ answer: "42" });
       },
     });
-    await client.request("branches-getByUrl", {
+    await client.branches.getByUrl({
       query: { url: "lp:project + branch" },
     });
-    await client.request("bug-patch", {
+    await client.request("bug.patch", {
       path: { id: "1" },
       body: { title: "changed" },
     });
-    await client.request("projects-new_project", {
+    await client.projects.newProject({
       body: {
         name: "example",
         display_name: "Example",

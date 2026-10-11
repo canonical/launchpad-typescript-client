@@ -11,12 +11,38 @@ import type {
   Output,
 } from "./generated/production/contracts.js";
 import type { LaunchpadCollection } from "./schemas/primitives.js";
+import type { operationPaths } from "./generated/production/operations.js";
+
+/** A bound operation with the same input, output, and decoder rules as request(). */
+export interface LaunchpadOperationMethod<K extends OperationId> {
+  <T>(
+    input: Input<K>,
+    settings: LaunchpadDecodeOptions<T>,
+  ): Promise<LaunchpadResponse<T>>;
+  (
+    input: Input<K>,
+    settings?: LaunchpadRequestOptions,
+  ): Promise<LaunchpadResponse<Output<K>>>;
+}
+
+/** Replace operation-ID leaves with methods while retaining namespace keys. */
+export type BoundOperationPaths<Paths> = {
+  readonly [Part in keyof Paths]: Paths[Part] extends OperationId
+    ? LaunchpadOperationMethod<Paths[Part]>
+    : BoundOperationPaths<Paths[Part]>;
+};
+
+/** Nested methods for upstream dotted IDs; legacy IDs remain request-only. */
+export type LaunchpadOperationMethods = BoundOperationPaths<
+  typeof operationPaths
+>;
 
 /**
- * Fetch client with generated operation types, unknown raw data, and pagination.
- * Fetch follows redirects; only the initial request target is confined.
+ * Fetch client with generated operation types, nested methods, and pagination.
+ * Dotted upstream IDs expose typed subject/namespace methods in addition to
+ * request(). Fetch follows redirects; only the initial target is confined.
  */
-export interface LaunchpadClient {
+export interface LaunchpadClient extends LaunchpadOperationMethods {
   /**
    * Request a generated operation with an explicit decoder that overrides its
    * documented output type. Decoder failures become LaunchpadDecodeError.

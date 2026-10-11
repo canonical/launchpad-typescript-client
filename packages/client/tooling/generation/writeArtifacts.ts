@@ -1,4 +1,5 @@
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import buildOperationPaths from "./buildOperationPaths.ts";
 import type {
   GenerationReport,
   Operation,
@@ -27,6 +28,7 @@ function pickOperationMetadata(operation: Operation): OperationMetadata {
 function renderOperations(operations: Record<string, Operation>): string {
   return [
     "/** Routing and wire encoding metadata; contains no validation runtime. */",
+    'import type { OperationId } from "./contracts.js";',
     "export interface OperationMetadata {",
     "  readonly method: string;",
     "  readonly template: string;",
@@ -44,6 +46,11 @@ function renderOperations(operations: Record<string, Operation>): string {
     ),
     "};",
     "Object.setPrototypeOf(operations, null);",
+    "/** Naming hierarchy; leaves are unchanged upstream operation IDs. */",
+    "export interface OperationPathNamespace {",
+    "  readonly [component: string]: OperationId | OperationPathNamespace;",
+    "}",
+    `export const operationPaths = ${JSON.stringify(buildOperationPaths(operations))} as const satisfies OperationPathNamespace;`,
     "",
   ].join("\n");
 }

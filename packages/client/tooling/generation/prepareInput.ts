@@ -8,6 +8,7 @@ import type {
   RequestBody,
 } from "../types.ts";
 import { isHttpMethod, isRecord, resolveReference } from "./sourceDocument.ts";
+import buildOperationPaths from "./buildOperationPaths.ts";
 
 /**
  * Reject a default anywhere in a path parameter schema, following references.
@@ -169,13 +170,15 @@ function collectOperations(
       };
     }
   }
+  buildOperationPaths(operations);
   return { operations, groups, checkedPathParameters };
 }
 
 /**
  * Prepare routing metadata and generator input while retaining upstream IDs,
  * source URLs, and schema semantics. Reject duplicate or missing operation IDs
- * and defaults in path parameter schemas.
+ * and defaults in path parameter schemas. Dotted IDs must form an unambiguous
+ * method hierarchy that does not replace the client's built-in methods.
  * @note Mutates the parsed document to expose route alternatives and explicit
  * open objects. Callers must not serialize it back over the source snapshot.
  */

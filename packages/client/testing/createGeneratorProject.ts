@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { dictionaryOpenApi, qastagingDictionaryOpenApi } from "./fixtures.ts";
 
 /**
- * Create an isolated package with source snapshots and the real generation tools.
+ * Create an isolated package with client sources, snapshots, and generation tools.
  *
  * @returns The temporary package root; callers must remove it after use.
  * @note Writes temporary files and links the pinned generator dependencies.
@@ -36,6 +36,15 @@ export default async function createGeneratorProject(): Promise<URL> {
       if (name === "node_modules" || name.endsWith(".test.ts")) return false;
       // Descend into capability folders, copying only TypeScript sources.
       return name.endsWith(".ts") || (await stat(source)).isDirectory();
+    },
+  });
+  await cp(new URL("../src/", import.meta.url), new URL("src/", root), {
+    recursive: true,
+    filter(source) {
+      const name = basename(source);
+      return (
+        name !== "generated" && name !== "testing" && !name.endsWith(".test.ts")
+      );
     },
   });
   const pkg = JSON.parse(
