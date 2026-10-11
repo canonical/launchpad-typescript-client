@@ -1,4 +1,4 @@
 {
-  "converter": "@canonical/launchpad-openapi@0.0.6",
-  "specSha256": "6813046a9610ad0b85895b811eb837d14f6ac999998cb1beec194c16bc3ad152"
+  "converter": "@canonical/launchpad-openapi@0.1.0",
+  "specSha256": "71333dd727fc8465cf2ff74ee636264a7447a882cc80a8346f9cd82e4adbdf9c"
 }
