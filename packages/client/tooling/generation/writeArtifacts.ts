@@ -4,34 +4,27 @@ import type {
   Operation,
   OperationMetadata,
   SchemaBinding,
-} from "./types.ts";
+} from "../types.ts";
 
+/** Select the routing and wire-encoding fields that transport needs at runtime. */
+function pickOperationMetadata(operation: Operation): OperationMetadata {
+  return {
+    method: operation.method,
+    template: operation.template,
+    fixedQuery: operation.fixedQuery,
+    bodyMediaTypes: operation.bodyMediaTypes,
+    requiredPath: operation.requiredPath,
+    queryRequired: operation.queryRequired,
+    bodyRequired: operation.bodyRequired,
+    sourcePath: operation.sourcePath,
+  };
+}
+
+/**
+ * Render transport metadata as a module that imports neither schemas nor the
+ * validation runtime.
+ */
 function renderOperations(operations: Record<string, Operation>): string {
-  const runtimeOperations: Record<string, OperationMetadata> =
-    Object.create(null);
-  for (const [id, operation] of Object.entries(operations)) {
-    // Keep transport metadata independent of schemas and validation runtime.
-    const {
-      method,
-      template,
-      fixedQuery,
-      bodyMediaTypes,
-      requiredPath,
-      queryRequired,
-      bodyRequired,
-      sourcePath,
-    } = operation;
-    runtimeOperations[id] = {
-      method,
-      template,
-      fixedQuery,
-      bodyMediaTypes,
-      requiredPath,
-      queryRequired,
-      bodyRequired,
-      sourcePath,
-    };
-  }
   return [
     "/** Routing and wire encoding metadata; contains no validation runtime. */",
     "export interface OperationMetadata {",
@@ -45,9 +38,9 @@ function renderOperations(operations: Record<string, Operation>): string {
     "  readonly sourcePath: string;",
     "}",
     "export const operations: Readonly<Record<string, OperationMetadata>> = {",
-    ...Object.entries(runtimeOperations).map(
+    ...Object.entries(operations).map(
       ([id, operation]) =>
-        `  [${JSON.stringify(id)}]: ${JSON.stringify(operation)},`,
+        `  [${JSON.stringify(id)}]: ${JSON.stringify(pickOperationMetadata(operation))},`,
     ),
     "};",
     "Object.setPrototypeOf(operations, null);",
@@ -99,6 +92,7 @@ function renderOperationContract(
   return `  ${JSON.stringify(id)}: { input: ${route} & { ${fields.join("; ")} }; output: ${output} };`;
 }
 
+/** Render type-only input and output contracts keyed by operation ID. */
 function renderContracts(operations: Record<string, Operation>): string {
   const modules = new Map<string, string>();
   const contracts = Object.entries(operations).map(([id, operation]) =>
@@ -121,21 +115,39 @@ function renderContracts(operations: Record<string, Operation>): string {
 }
 
 /**
+ * Replace the model and operation schema directories with freshly generated ones.
+ * @note Removes stale modules from earlier runs before copying new output.
+ */
+async function replaceSchemaModules(
+  generated: URL,
+  output: URL,
+): Promise<void> {
+  for (const directory of ["models", "operations"]) {
+    const destination = new URL(`schemas/${directory}/`, generated);
+    await rm(destination, { recursive: true, force: true });
+    await cp(new URL(`schemas/${directory}/`, output), destination, {
+      recursive: true,
+    });
+  }
+}
+
+/**
  * Write one environment's transport metadata, type-only contracts, provenance
  * report, and grouped schemas. No generated artifact is written outside its
- * environment directory.
+ * environment directory, and nothing is written if component schemas are missing.
  *
  * @param generated - Destination directory for this environment's artifacts.
  * @param output - Temporary directory containing the generated schema modules.
  * @param report - Verified provenance and source-to-symbol bindings.
- * @note Creates or overwrites generated files and replaces the model and
- * operation schema directories to remove stale modules from earlier runs.
+ * @note Creates or overwrites generated files and replaces the schema modules.
  */
-export default async function writeGeneration(
+export default async function writeArtifacts(
   generated: URL,
   output: URL,
   report: GenerationReport,
 ): Promise<void> {
+  if (report.resourceSchemaCount !== report.sourceSchemaCount)
+    throw new Error("Generator dropped component schemas");
   await mkdir(generated, { recursive: true });
   await writeFile(
     new URL("operations.ts", generated),
@@ -145,17 +157,9 @@ export default async function writeGeneration(
     new URL("contracts.ts", generated),
     renderContracts(report.operations),
   );
-  if (report.resourceSchemaCount !== report.sourceSchemaCount)
-    throw new Error("Generator dropped component schemas");
   await writeFile(
     new URL("generation.json", generated),
     JSON.stringify(report, null, 2) + "\n",
   );
-  for (const directory of ["models", "operations"]) {
-    const destination = new URL(`schemas/${directory}/`, generated);
-    await rm(destination, { recursive: true, force: true });
-    await cp(new URL(`schemas/${directory}/`, output), destination, {
-      recursive: true,
-    });
-  }
+  await replaceSchemaModules(generated, output);
 }

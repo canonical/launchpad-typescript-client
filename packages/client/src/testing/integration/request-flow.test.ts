@@ -37,8 +37,13 @@ describe("request flow", () => {
       path: { id: "1" },
       body: { title: "changed" },
     });
-    await client.request("bug_trackers-ensureBugTracker", {
-      body: { base_url: "https://bugs.example/", title: "Title + space" },
+    await client.request("projects-new_project", {
+      body: {
+        name: "example",
+        display_name: "Example",
+        title: "Title + space",
+        summary: "Example project",
+      },
     });
     const { data } = await client.requestRaw(
       {
@@ -81,7 +86,7 @@ describe("request flow", () => {
     assert.equal(fetched[2].request.method, "POST");
     assert.equal(
       new URL(fetched[2].request.url).searchParams.get("ws.op"),
-      "ensureBugTracker",
+      "new_project",
     );
     assert.equal(
       fetched[2].request.headers.get("Content-Type"),
@@ -92,8 +97,8 @@ describe("request flow", () => {
       "Title + space",
     );
     assert.equal(
-      new URLSearchParams(fetched[2].body).get("base_url"),
-      "https://bugs.example/",
+      new URLSearchParams(fetched[2].body).get("display_name"),
+      "Example",
     );
     const rawUrl = new URL(fetched[3].request.url);
     assert.equal(rawUrl.searchParams.get("ids"), '["1","2"]');

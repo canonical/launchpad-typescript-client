@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "node generate.ts",
+    "generate": "node generation/run.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "schema:update": "node update-schema.ts"
+    "schema:update": "node snapshots/refresh.ts"
   },
   "devDependencies": {
     "@canonical/launchpad-openapi": "0.0.6",

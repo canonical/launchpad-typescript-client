@@ -4,7 +4,7 @@ export default defineConfig({
   root: import.meta.dirname,
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "tooling/*.test.ts"],
+    include: ["src/**/*.test.ts", "tooling/**/*.test.ts"],
     testTimeout: 30_000,
     coverage: {
       provider: "v8",

@@ -71,7 +71,7 @@ export const dictionaryOpenApi = {
   paths: {
     "/dictionary": {
       get: {
-        operationId: "dictionary-get",
+        operationId: "dictionary.get",
         tags: ["dictionary"],
         responses: {
           200: {
@@ -145,7 +145,7 @@ export const qastagingDictionaryOpenApi = {
     "/qa-dictionary": {
       get: {
         ...dictionaryOpenApi.paths["/dictionary"].get,
-        operationId: "dictionary-get-qa",
+        operationId: "dictionary.qa.get",
       },
     },
   },
@@ -166,18 +166,18 @@ import type { Output as QaOutput } from "@canonical/launchpad-typescript-client/
 import type { Dictionary } from "@canonical/launchpad-typescript-client/schemas/models/shared";
 import type { Dictionary as QaDictionary } from "@canonical/launchpad-typescript-client/schemas/qastaging/models/shared";
 import type { DictionaryGetResponse } from "@canonical/launchpad-typescript-client/schemas/operations/dictionary";
-import type { DictionaryGetQaResponse } from "@canonical/launchpad-typescript-client/schemas/qastaging/operations/dictionary";
-const production: Output<"dictionary-get"> = { answer: 42 };
-const qastaging: QaOutput<"dictionary-get-qa"> = { answer: "42" };
+import type { DictionaryQaGetResponse } from "@canonical/launchpad-typescript-client/schemas/qastaging/operations/dictionary";
+const production: Output<"dictionary.get"> = { answer: 42 };
+const qastaging: QaOutput<"dictionary.qa.get"> = { answer: "42" };
 // @ts-expect-error Production and qastaging retain different value types.
-const wrongProduction: Output<"dictionary-get"> = { answer: "42" };
+const wrongProduction: Output<"dictionary.get"> = { answer: "42" };
 // @ts-expect-error Production operations are not qastaging operations.
-type WrongOperation = QaOutput<"dictionary-get">;
-const input: Input<"dictionary-get"> = {};
+type WrongOperation = QaOutput<"dictionary.get">;
+const input: Input<"dictionary.get"> = {};
 const model: Dictionary = production;
 const qaModel: QaDictionary = qastaging;
 const response: DictionaryGetResponse = model;
-const qaResponse: DictionaryGetQaResponse = qaModel;
+const qaResponse: DictionaryQaGetResponse = qaModel;
 // @ts-expect-error Model aliases must retain their inferred value types.
 const wrongModel: Dictionary = qaModel;
 void [production, qastaging, wrongProduction, input, response, qaResponse, wrongModel];

@@ -4,12 +4,12 @@ import {
   mkdir,
   mkdtemp,
   readFile,
-  readdir,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dictionaryOpenApi, qastagingDictionaryOpenApi } from "./fixtures.ts";
 
@@ -24,16 +24,20 @@ export default async function createGeneratorProject(): Promise<URL> {
     `${await mkdtemp(join(tmpdir(), "launchpad-generator-"))}/`,
   );
   const tooling = new URL("../tooling/", import.meta.url);
-  await mkdir(new URL("tooling/", root));
   await symlink(
     fileURLToPath(new URL("node_modules/", tooling)),
     new URL("node_modules", root),
     "dir",
   );
-  for (const name of await readdir(tooling)) {
-    if (name.endsWith(".ts") && !name.endsWith(".test.ts"))
-      await cp(new URL(name, tooling), new URL(`tooling/${name}`, root));
-  }
+  await cp(tooling, new URL("tooling/", root), {
+    recursive: true,
+    async filter(source) {
+      const name = basename(source);
+      if (name === "node_modules" || name.endsWith(".test.ts")) return false;
+      // Descend into capability folders, copying only TypeScript sources.
+      return name.endsWith(".ts") || (await stat(source)).isDirectory();
+    },
+  });
   const pkg = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );

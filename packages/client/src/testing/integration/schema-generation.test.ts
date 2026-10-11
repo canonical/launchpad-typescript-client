@@ -4,27 +4,28 @@ import { createHash } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { describe, it } from "vitest";
 import { fileURLToPath } from "node:url";
-import type { GenerationReport } from "./types.ts";
+import type { GenerationReport } from "../../../tooling/types.ts";
 import type { z } from "zod";
-import createGeneratorProject from "../testing/createGeneratorProject.ts";
+import createGeneratorProject from "../../../testing/createGeneratorProject.ts";
 import {
+  dictionaryOpenApi,
   environmentContractConsumer,
   environmentSchemaConsumer,
   referencedParameterOpenApi,
-} from "../testing/fixtures.ts";
+} from "../../../testing/fixtures.ts";
 
 const PROVENANCE_HASH_MISMATCH_PATTERN =
   /Snapshot provenance hash mismatch for production/;
 
 const compiler = fileURLToPath(
-  new URL("node_modules/typescript/bin/tsc", import.meta.url),
+  new URL("../../../tooling/node_modules/typescript/bin/tsc", import.meta.url),
 );
 
 describe("schema generation", () => {
   it("keeps production and qastaging contracts, validators, exports, and provenance separate", async () => {
     const root = await createGeneratorProject();
     try {
-      execFileSync(process.execPath, ["tooling/generate.ts"], {
+      execFileSync(process.execPath, ["tooling/generation/run.ts"], {
         cwd: root,
         stdio: "pipe",
       });
@@ -48,8 +49,8 @@ describe("schema generation", () => {
         { cwd: root, stdio: "pipe" },
       );
       for (const [environment, operationId, path] of [
-        ["production", "dictionary-get", "/dictionary"],
-        ["qastaging", "dictionary-get-qa", "/qa-dictionary"],
+        ["production", "dictionary.get", "/dictionary"],
+        ["qastaging", "dictionary.qa.get", "/qa-dictionary"],
       ]) {
         const report: GenerationReport = JSON.parse(
           await readFile(
@@ -155,7 +156,7 @@ describe("schema generation", () => {
       );
       execFileSync(
         process.execPath,
-        ["tooling/generate-environment.ts", "production"],
+        ["tooling/generation/runEnvironment.ts", "production"],
         {
           cwd: root,
           stdio: "pipe",
@@ -167,11 +168,48 @@ describe("schema generation", () => {
           "utf8",
         ),
       );
-      assert.deepEqual(report.operations["dictionary-get"].requiredPath, [
+      assert.deepEqual(report.operations["dictionary.get"].requiredPath, [
         "key",
       ]);
-      assert.ok(report.operations["dictionary-get"].schemas["request-path"]);
+      assert.ok(report.operations["dictionary.get"].schemas["request-path"]);
       assert.equal(await readFile(snapshot, "utf8"), source);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects dotted operation IDs that collapse to the same generated symbol", async () => {
+    const root = await createGeneratorProject();
+    try {
+      const operation = dictionaryOpenApi.paths["/dictionary"].get;
+      const source = JSON.stringify({
+        ...dictionaryOpenApi,
+        paths: {
+          "/dictionary": {
+            get: { ...operation, operationId: "dictionary.fooBar.get" },
+          },
+          "/other": {
+            get: { ...operation, operationId: "dictionary.foo.barGet" },
+          },
+        },
+      });
+      await writeFile(new URL("schema/production/openapi.json", root), source);
+      await writeFile(
+        new URL("schema/production/provenance.json", root),
+        JSON.stringify({
+          converter: "@canonical/launchpad-openapi@0.0.6 (local upstream)",
+          specSha256: createHash("sha256").update(source).digest("hex"),
+        }),
+      );
+      assert.throws(
+        () =>
+          execFileSync(
+            process.execPath,
+            ["tooling/generation/runEnvironment.ts", "production"],
+            { cwd: root, stdio: "pipe" },
+          ),
+        /Conflicting generated symbol .*DictionaryFooBarGet.*\/dictionary.*\/other/s,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -189,7 +227,7 @@ describe("schema generation", () => {
       );
       assert.throws(
         () =>
-          execFileSync(process.execPath, ["tooling/generate.ts"], {
+          execFileSync(process.execPath, ["tooling/generation/run.ts"], {
             cwd: root,
             stdio: "pipe",
           }),

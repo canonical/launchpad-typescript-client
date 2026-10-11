@@ -1,4 +1,9 @@
 /**
+ * Client package root; snapshots and generated artifacts are resolved from here.
+ */
+export const PACKAGE_ROOT = new URL("../", import.meta.url);
+
+/**
  * Snapshot targets are separate contracts, not interchangeable host aliases.
  */
 export const ENVIRONMENTS = ["production", "qastaging"] as const;

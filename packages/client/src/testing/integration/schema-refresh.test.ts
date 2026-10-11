@@ -3,8 +3,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { describe, it } from "vitest";
-import createGeneratorProject from "../testing/createGeneratorProject.ts";
-import { fakeConverterCli } from "../testing/fixtures.ts";
+import createGeneratorProject from "../../../testing/createGeneratorProject.ts";
+import { fakeConverterCli } from "../../../testing/fixtures.ts";
 
 describe("schema refresh", () => {
   it("selects each converter environment and saves its actual version and source hash", async () => {
@@ -26,7 +26,7 @@ describe("schema refresh", () => {
       );
       execFileSync(
         process.execPath,
-        ["tooling/update-schema.ts", "--converter", "converter"],
+        ["tooling/snapshots/refresh.ts", "--converter", "converter"],
         { cwd: root, stdio: "pipe" },
       );
       for (const environment of ["production", "qastaging"]) {

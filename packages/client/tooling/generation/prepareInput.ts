@@ -1,68 +1,18 @@
-/**
- * Interpret the upstream snapshot for generation without correcting its schemas.
- * Preparation and binding checks share the same method and reference traversal
- * rules so both phases identify the same source operations.
- */
-import { HTTP_METHODS } from "./constants.ts";
 import type {
-  HttpMethod,
   OpenApiDocument,
   Operation,
+  OperationMetadata,
   Parameter,
   PathItem,
   PreparedGeneration,
-  Reference,
   RequestBody,
-} from "./types.ts";
-
-/** Distinguish HTTP operation keys from other path-item metadata. */
-export function isHttpMethod(value: string): value is HttpMethod {
-  return HTTP_METHODS.some((method) => method === value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+} from "../types.ts";
+import { isHttpMethod, isRecord, resolveReference } from "./sourceDocument.ts";
 
 /**
- * Resolve a local JSON Pointer using the type of its OpenAPI source location.
- * Reject external references, missing targets, and structural reference cycles;
- * do not infer replacement schemas.
+ * Reject a default anywhere in a path parameter schema, following references.
+ * @note Tracks visited nodes in the supplied set to stop at reference cycles.
  */
-export function resolveReference<T extends object>(
-  spec: OpenApiDocument,
-  value: T | Reference,
-): T {
-  const seen = new Set<string>();
-  while (true) {
-    if (!value || typeof value !== "object")
-      throw new TypeError("Invalid referenced OpenAPI value");
-    if (!("$ref" in value) || !value.$ref) return value as T;
-    const ref = value.$ref;
-    if (typeof ref !== "string" || !ref.startsWith("#/"))
-      throw new Error(`Unsupported reference ${ref}`);
-    if (seen.has(ref)) throw new Error(`Cyclic structural reference ${ref}`);
-    seen.add(ref);
-    let target: unknown = spec;
-    for (const segment of ref.slice(2).split("/")) {
-      const key = decodeURIComponent(segment)
-        .replaceAll("~1", "/")
-        .replaceAll("~0", "~");
-      if (
-        target === null ||
-        typeof target !== "object" ||
-        !Object.hasOwn(target, key)
-      )
-        throw new Error(`Unresolved reference ${ref}`);
-      target = Reflect.get(target, key);
-    }
-    if (!isRecord(target))
-      throw new TypeError("Invalid referenced OpenAPI value");
-    // A reference has the type of its source location in the upstream document.
-    value = target as T | Reference;
-  }
-}
-
 function rejectDefaults(
   spec: OpenApiDocument,
   node: unknown,
@@ -130,6 +80,10 @@ function includeAlternatives(
   }
 }
 
+/**
+ * Reject defaults in path parameter schemas.
+ * @returns The number of path parameters checked.
+ */
 function validatePathParameters(
   spec: OpenApiDocument,
   parameters: Parameter[],
@@ -145,6 +99,22 @@ function validatePathParameters(
   return checkedPathParameters;
 }
 
+/** Split an upstream route into its path template and fixed query pairs. */
+function parseRoute(
+  sourcePath: string,
+): Pick<OperationMetadata, "template" | "fixedQuery"> {
+  const separator = sourcePath.indexOf("?");
+  if (separator === -1) return { template: sourcePath, fixedQuery: [] };
+  return {
+    template: sourcePath.slice(0, separator),
+    fixedQuery: [...new URLSearchParams(sourcePath.slice(separator + 1))],
+  };
+}
+
+/**
+ * Describe every source operation by its upstream ID, rejecting missing or
+ * duplicate IDs and defaults in path parameter schemas.
+ */
 function collectOperations(
   spec: OpenApiDocument,
   alternativePaths: Map<string, string>,
@@ -159,15 +129,17 @@ function collectOperations(
       const operation = item[method];
       if (operation === undefined) continue;
       const id = operation.operationId;
-      if (
-        typeof id !== "string" ||
-        id.length === 0 ||
-        Object.hasOwn(operations, id)
-      )
+      const sourcePath = alternativePaths.get(path) ?? path;
+      if (typeof id !== "string" || id.length === 0)
+        throw new Error(`Missing operationId at ${method} ${sourcePath}`);
+      if (Object.hasOwn(operations, id)) {
+        const previous = operations[id];
         throw new Error(
-          `Missing or duplicate operationId at ${method} ${path}`,
+          `Duplicate operationId ${id}: ${previous.sourceLocation[2]} ${previous.sourcePath} and ${method} ${sourcePath}`,
         );
+      }
       for (const tag of operation.tags ?? []) groups.add(tag);
+
       const parameters = [
         ...(item.parameters ?? []),
         ...(operation.parameters ?? []),
@@ -177,18 +149,9 @@ function collectOperations(
         resolveReference<RequestBody>(spec, operation.requestBody);
       checkedPathParameters += validatePathParameters(spec, parameters);
 
-      const sourcePath = alternativePaths.get(path) ?? path;
-      const separator = sourcePath.indexOf("?");
-      const template =
-        separator === -1 ? sourcePath : sourcePath.slice(0, separator);
-      const fixedQuery =
-        separator === -1
-          ? []
-          : [...new URLSearchParams(sourcePath.slice(separator + 1))];
       operations[id] = {
         method: method.toUpperCase(),
-        template,
-        fixedQuery,
+        ...parseRoute(sourcePath),
         bodyMediaTypes: Object.keys(requestBody?.content ?? {}),
         requiredPath: parameters
           .filter((parameter) => parameter.in === "path")
@@ -216,7 +179,9 @@ function collectOperations(
  * @note Mutates the parsed document to expose route alternatives and explicit
  * open objects. Callers must not serialize it back over the source snapshot.
  */
-export function prepareGeneration(spec: OpenApiDocument): PreparedGeneration {
+export default function prepareInput(
+  spec: OpenApiDocument,
+): PreparedGeneration {
   const explicitOpenObjects = preserveOpenObjects(spec);
   const alternativePaths = new Map<string, string>();
   for (const item of Object.values(spec.paths))

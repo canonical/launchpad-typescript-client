@@ -42,6 +42,19 @@ export type GeneratorSymbol = Parameters<
 /** Generator-provided source location, resource category, and schema role. */
 export type SymbolMetadata = NonNullable<GeneratorSymbol["meta"]>;
 
+/** A generator symbol retained until its final exported name is available. */
+export interface CollectedSymbol {
+  symbol: GeneratorSymbol;
+  meta: SymbolMetadata;
+  file: string;
+}
+
+/** Component bindings and the full source-to-symbol inventory. */
+export type SchemaBindings = Pick<
+  GenerationReport,
+  "components" | "schemaBindings"
+>;
+
 /** Final exported schema name and module path relative to the environment. */
 export interface SchemaBinding {
   file: string;

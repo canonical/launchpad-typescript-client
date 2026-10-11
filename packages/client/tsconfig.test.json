@@ -9,7 +9,7 @@
   "include": [
     "src/**/*.test.ts",
     "testing/**/*.ts",
-    "tooling/*.test.ts",
+    "tooling/**/*.test.ts",
     "vitest.config.ts"
   ],
   "exclude": []
