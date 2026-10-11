@@ -35,10 +35,10 @@ export default function createOperationMethods<
       input: Input<K>,
       settings: LaunchpadDecodeOptions<T>,
     ): Promise<LaunchpadResponse<T>>;
-    function invoke(
-      input: Input<K>,
+    function invoke<const I extends Input<K> = Input<K>>(
+      input: I,
       settings?: LaunchpadRequestOptions,
-    ): Promise<LaunchpadResponse<Output<K>>>;
+    ): Promise<LaunchpadResponse<Output<K, I>>>;
     function invoke(
       input: Input<K>,
       settings?: RequestSettings,

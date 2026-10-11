@@ -86,11 +86,11 @@ export function createLaunchpadClient(
     input: Input<K>,
     settings: LaunchpadDecodeOptions<T>,
   ): Promise<LaunchpadResponse<T>>;
-  function request<K extends OperationId>(
+  function request<K extends OperationId, const I extends Input<K> = Input<K>>(
     operationId: K,
-    input: Input<K>,
+    input: I,
     settings?: LaunchpadRequestOptions,
-  ): Promise<LaunchpadResponse<Output<K>>>;
+  ): Promise<LaunchpadResponse<Output<K, I>>>;
   function request<K extends OperationId>(
     operationId: K,
     input: Input<K>,

@@ -63,6 +63,24 @@ Generated operation IDs select input and documented output types. These types do
 not validate responses; supplying `decode` explicitly validates or transforms the
 result and overrides its inferred type. Undocumented outputs remain unknown.
 
+Collection operations supporting `ws.show` infer a page when the option is
+omitted or definitely not `"total_size"`, and a number for the literal
+`"total_size"`. A widened string or optional count selection retains the union.
+This applies to nested methods and `request`; an explicit decoder still overrides
+it. `Output<K>` retains the full wire union, while `Output<K, typeof input>` can
+select the output for a particular input.
+
+```ts
+const path = { distribution: "ubuntu", archive: "primary" };
+const page = await client.archive.distribution.getPublishedSources({ path });
+console.log(page.data.entries);
+const count = await client.request("archive.distribution.getPublishedSources", {
+  path,
+  query: { "ws.show": "total_size" },
+});
+const total: number = count.data;
+```
+
 The root dispatcher uses production contracts. Changing `baseUrl` changes the
 transport destination, not its TypeScript contract. For qastaging-only contracts,
 use `requestRaw` with an explicit qastaging decoder. Paths and absolute resource

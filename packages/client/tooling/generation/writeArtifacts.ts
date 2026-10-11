@@ -99,7 +99,7 @@ function renderOperationContract(
   return `  ${JSON.stringify(id)}: { input: ${route} & { ${fields.join("; ")} }; output: ${output} };`;
 }
 
-/** Render type-only input and output contracts keyed by operation ID. */
+/** Render type-only contracts, including argument-sensitive collection outputs. */
 function renderContracts(operations: Record<string, Operation>): string {
   const modules = new Map<string, string>();
   const contracts = Object.entries(operations).map(([id, operation]) =>
@@ -108,6 +108,13 @@ function renderContracts(operations: Record<string, Operation>): string {
   const imports = [...modules].map(
     ([file, alias]) => `import type * as ${alias} from './${file}';`,
   );
+  const collectionOperations = Object.entries(operations)
+    .filter(([, operation]) =>
+      operation.parameters.some(
+        (parameter) => parameter.in === "query" && parameter.name === "ws.show",
+      ),
+    )
+    .map(([id]) => JSON.stringify(id));
   return [
     "import type { z } from 'zod';",
     ...imports,
@@ -116,7 +123,22 @@ function renderContracts(operations: Record<string, Operation>): string {
     "};",
     "export type OperationId = keyof Operations;",
     'export type Input<K extends keyof Operations> = Operations[K]["input"];',
-    'export type Output<K extends keyof Operations> = Operations[K]["output"];',
+    `type CollectionOperationId = ${collectionOperations.join(" | ") || "never"};`,
+    // Distribute over optional queries and union inputs before inspecting keys.
+    "type FieldValue<T, Key extends PropertyKey> = T extends unknown ? Key extends keyof T ? T[Key] : undefined : never;",
+    "type CollectionOutput<Response, Show> =",
+    "  [Response] extends [number | { start: number; entries: unknown[] }]",
+    "    ? [Extract<Response, number>] extends [never] ? Response",
+    "      : [Exclude<Response, number>] extends [never] ? Response",
+    "      : unknown extends Show ? Response",
+    '      : [Show] extends ["total_size"] ? Extract<Response, number>',
+    '      : "total_size" extends Show ? Response : Exclude<Response, number>',
+    "    : Response;",
+    "/** Documented output, narrowed by ws.show when a concrete input is supplied. */",
+    "export type Output<K extends keyof Operations, I extends Input<K> = Input<K>> =",
+    "  K extends CollectionOperationId",
+    '    ? CollectionOutput<Operations[K]["output"], FieldValue<FieldValue<I, "query">, "ws.show">>',
+    '    : Operations[K]["output"];',
     "",
   ].join("\n");
 }

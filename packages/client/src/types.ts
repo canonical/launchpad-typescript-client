@@ -19,10 +19,10 @@ export interface LaunchpadOperationMethod<K extends OperationId> {
     input: Input<K>,
     settings: LaunchpadDecodeOptions<T>,
   ): Promise<LaunchpadResponse<T>>;
-  (
-    input: Input<K>,
+  <const I extends Input<K> = Input<K>>(
+    input: I,
     settings?: LaunchpadRequestOptions,
-  ): Promise<LaunchpadResponse<Output<K>>>;
+  ): Promise<LaunchpadResponse<Output<K, I>>>;
 }
 
 /** Replace operation-ID leaves with methods while retaining namespace keys. */
@@ -54,13 +54,15 @@ export interface LaunchpadClient extends LaunchpadOperationMethods {
   ): Promise<LaunchpadResponse<T>>;
   /**
    * Request a generated operation using its documented input and output types.
+   * Collection outputs narrow to counts for literal ws.show=total_size, pages
+   * when definitely not selected, and the union when the value is uncertain.
    * Responses are not validated; fixed operation arguments cannot be overridden.
    */
-  request<K extends OperationId>(
+  request<K extends OperationId, const I extends Input<K> = Input<K>>(
     operationId: K,
-    input: Input<K>,
+    input: I,
     settings?: LaunchpadRequestOptions,
-  ): Promise<LaunchpadResponse<Output<K>>>;
+  ): Promise<LaunchpadResponse<Output<K, I>>>;
   /**
    * Request an API-relative path or confined absolute resource URL.
    * The decoder determines the data type; failures become LaunchpadDecodeError.

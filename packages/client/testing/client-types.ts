@@ -13,6 +13,7 @@ import type {
   OperationId,
   Output,
 } from "@canonical/launchpad-typescript-client/contracts";
+import type { Output as QaOutput } from "@canonical/launchpad-typescript-client/contracts/qastaging";
 import {
   launchpadCollectionSchema,
   launchpadResourceSchema,
@@ -52,6 +53,126 @@ const absolute = client.request("project.get", {
 });
 expectType<Equal<Data<typeof validated>, Output<"project.get">>>();
 expectType<Equal<Data<typeof absolute>, Output<"project.get">>>();
+
+// Collection/count responses depend on the supplied ws.show, not just the ID.
+const sourcesOperation = "archive.distribution.getPublishedSources";
+const archivePath = { distribution: "ubuntu", archive: "primary" };
+type SourcesResponse = Output<typeof sourcesOperation>;
+type SourcesPage = Exclude<SourcesResponse, number>;
+const sourcePage = client.archive.distribution.getPublishedSources({
+  path: archivePath,
+});
+const requestedPage = client.request(sourcesOperation, { path: archivePath });
+const sourceCount = client.archive.distribution.getPublishedSources({
+  path: archivePath,
+  query: { "ws.show": "total_size" },
+});
+const requestedCount = client.request(
+  sourcesOperation,
+  { path: archivePath, query: { "ws.show": "total_size" } },
+  { headers: {} },
+);
+expectType<Equal<Data<typeof sourcePage>, SourcesPage>>();
+expectType<Equal<Data<typeof requestedPage>, SourcesPage>>();
+expectType<Equal<Data<typeof sourceCount>, number>>();
+expectType<Equal<Data<typeof requestedCount>, number>>();
+const noPathPage = client.branches.getBranches({});
+expectType<
+  Equal<
+    Data<typeof noPathPage>,
+    Exclude<Output<"branches.getBranches">, number>
+  >
+>();
+expectType<
+  Equal<
+    Output<typeof sourcesOperation, { path: typeof archivePath }>,
+    SourcesPage
+  >
+>();
+expectType<
+  Equal<
+    QaOutput<
+      typeof sourcesOperation,
+      { path: typeof archivePath; query: { "ws.show": "total_size" } }
+    >,
+    number
+  >
+>();
+
+// Other literal values and omitted/undefined fields cannot select the count.
+const otherPage = client.archive.distribution.getPublishedSources({
+  path: archivePath,
+  query: { "ws.show": "entries" },
+});
+const emptyQueryPage = client.request(sourcesOperation, {
+  path: archivePath,
+  query: {},
+});
+const undefinedShowPage = client.request(sourcesOperation, {
+  path: archivePath,
+  query: { "ws.show": undefined },
+});
+const undefinedQueryPage = client.request(sourcesOperation, {
+  path: archivePath,
+  query: undefined,
+});
+expectType<Equal<Data<typeof otherPage>, SourcesPage>>();
+expectType<Equal<Data<typeof emptyQueryPage>, SourcesPage>>();
+expectType<Equal<Data<typeof undefinedShowPage>, SourcesPage>>();
+expectType<Equal<Data<typeof undefinedQueryPage>, SourcesPage>>();
+
+// Widened strings, optional counts, and unions must retain both wire shapes.
+declare const show: string;
+declare const maybeShow: "total_size" | "entries";
+declare const optionalCountQuery: { "ws.show"?: "total_size" };
+declare const optionalPageQuery: { "ws.show"?: "entries" } | undefined;
+declare const sourcesInput: Input<typeof sourcesOperation>;
+declare const unionInput:
+  | { path: typeof archivePath }
+  | { path: typeof archivePath; query: { "ws.show": "total_size" } };
+const unknownShow = client.archive.distribution.getPublishedSources({
+  path: archivePath,
+  query: { "ws.show": show },
+});
+const unionShow = client.request(sourcesOperation, {
+  path: archivePath,
+  query: { "ws.show": maybeShow },
+});
+const optionalCount = client.archive.distribution.getPublishedSources({
+  path: archivePath,
+  query: optionalCountQuery,
+});
+const optionalPage = client.request(sourcesOperation, {
+  path: archivePath,
+  query: optionalPageQuery,
+});
+const broadInput = client.request(sourcesOperation, sourcesInput);
+const widenedInput = {
+  path: archivePath,
+  query: { "ws.show": "total_size" },
+};
+const widenedCount = client.request(sourcesOperation, widenedInput);
+expectType<Equal<Data<typeof unknownShow>, SourcesResponse>>();
+expectType<Equal<Data<typeof unionShow>, SourcesResponse>>();
+expectType<Equal<Data<typeof optionalCount>, SourcesResponse>>();
+expectType<Equal<Data<typeof optionalPage>, SourcesPage>>();
+expectType<Equal<Data<typeof broadInput>, SourcesResponse>>();
+expectType<Equal<Data<typeof widenedCount>, SourcesResponse>>();
+const unionResponse =
+  client.archive.distribution.getPublishedSources(unionInput);
+expectType<Equal<Data<typeof unionResponse>, SourcesResponse>>();
+
+const decodedCount = client.archive.distribution.getPublishedSources(
+  { path: archivePath, query: { "ws.show": "total_size" } },
+  { decode: String },
+);
+const decodedPage = client.request(
+  sourcesOperation,
+  { path: archivePath },
+  { decode: () => ({ decoded: true }) },
+);
+expectType<Equal<Data<typeof decodedCount>, string>>();
+expectType<Equal<Data<typeof decodedPage>, { decoded: boolean }>>();
 
 // Select an undocumented-output category from the contract, not a named endpoint.
 type UndocumentedOperation = {
@@ -94,6 +215,15 @@ expectType<
   Equal<LaunchpadCollection<number>, z.output<typeof transformedCollection>>
 >();
 
+client.request(sourcesOperation, {
+  path: archivePath,
+  // @ts-expect-error Collection options must still satisfy the generated input.
+  query: { "ws.show": 1 },
+});
+// @ts-expect-error Required collection path parameters are still required.
+client.archive.distribution.getPublishedSources({
+  query: { "ws.show": "total_size" },
+});
 // @ts-expect-error Arbitrary raw output types still require a decoder.
 client.requestRaw<string>({ path: "resource" });
 // @ts-expect-error Operation IDs remain a generated contract.
