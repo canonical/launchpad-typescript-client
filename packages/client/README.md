@@ -52,7 +52,7 @@ stay intact. Generation rejects operation/namespace conflicts such as
 `account.get` alongside `account.get.details`, and subjects that would replace
 `request`, `requestRaw`, `pages`, or `items`.
 
-The snapshots generated with `@canonical/launchpad-openapi@0.1.0` follow the
+The snapshots follow the
 [namespace-first convention](../../docs/adr/0001-namespace-first-naming-paths.md),
 including inherited contexts such as `accessToken.gitRepository.sourcePackage.get`.
 No names or namespaces are guessed by the client. URL segments, field names, and
@@ -63,12 +63,13 @@ Generated operation IDs select input and documented output types. These types do
 not validate responses; supplying `decode` explicitly validates or transforms the
 result and overrides its inferred type. Undocumented outputs remain unknown.
 
-Collection operations supporting `ws.show` infer a page when the option is
-omitted or definitely not `"total_size"`, and a number for the literal
-`"total_size"`. A widened string or optional count selection retains the union.
-This applies to nested methods and `request`; an explicit decoder still overrides
-it. `Output<K>` retains the full wire union, while `Output<K, typeof input>` can
-select the output for a particular input.
+Collection operations accept the optional literal `ws.show: "total_size"`.
+Omitting it or passing undefined infers a page; the literal infers a number.
+An optional count selection retains the union. Other values and widened strings
+do not satisfy the generated input types. This applies to nested methods and
+`request`; an explicit decoder still overrides the inferred output. `Output<K>`
+retains the full wire union, while `Output<K, typeof input>` can select the output
+for a particular input.
 
 ```ts
 const path = { distribution: "ubuntu", archive: "primary" };

@@ -59,6 +59,12 @@ const sourcesOperation = "archive.distribution.getPublishedSources";
 const archivePath = { distribution: "ubuntu", archive: "primary" };
 type SourcesResponse = Output<typeof sourcesOperation>;
 type SourcesPage = Exclude<SourcesResponse, number>;
+expectType<
+  Equal<
+    NonNullable<Input<typeof sourcesOperation>["query"]>["ws.show"],
+    "total_size" | undefined
+  >
+>();
 const sourcePage = client.archive.distribution.getPublishedSources({
   path: archivePath,
 });
@@ -99,11 +105,7 @@ expectType<
   >
 >();
 
-// Other literal values and omitted/undefined fields cannot select the count.
-const otherPage = client.archive.distribution.getPublishedSources({
-  path: archivePath,
-  query: { "ws.show": "entries" },
-});
+// Omitted and undefined fields cannot select the count.
 const emptyQueryPage = client.request(sourcesOperation, {
   path: archivePath,
   query: {},
@@ -116,24 +118,18 @@ const undefinedQueryPage = client.request(sourcesOperation, {
   path: archivePath,
   query: undefined,
 });
-expectType<Equal<Data<typeof otherPage>, SourcesPage>>();
 expectType<Equal<Data<typeof emptyQueryPage>, SourcesPage>>();
 expectType<Equal<Data<typeof undefinedShowPage>, SourcesPage>>();
 expectType<Equal<Data<typeof undefinedQueryPage>, SourcesPage>>();
 
-// Widened strings, optional counts, and unions must retain both wire shapes.
-declare const show: string;
-declare const maybeShow: "total_size" | "entries";
+// Optional counts and unions must retain both wire shapes.
+declare const maybeShow: "total_size" | undefined;
 declare const optionalCountQuery: { "ws.show"?: "total_size" };
-declare const optionalPageQuery: { "ws.show"?: "entries" } | undefined;
+declare const optionalPageQuery: { "ws.show"?: undefined } | undefined;
 declare const sourcesInput: Input<typeof sourcesOperation>;
 declare const unionInput:
   | { path: typeof archivePath }
   | { path: typeof archivePath; query: { "ws.show": "total_size" } };
-const unknownShow = client.archive.distribution.getPublishedSources({
-  path: archivePath,
-  query: { "ws.show": show },
-});
 const unionShow = client.request(sourcesOperation, {
   path: archivePath,
   query: { "ws.show": maybeShow },
@@ -147,17 +143,10 @@ const optionalPage = client.request(sourcesOperation, {
   query: optionalPageQuery,
 });
 const broadInput = client.request(sourcesOperation, sourcesInput);
-const widenedInput = {
-  path: archivePath,
-  query: { "ws.show": "total_size" },
-};
-const widenedCount = client.request(sourcesOperation, widenedInput);
-expectType<Equal<Data<typeof unknownShow>, SourcesResponse>>();
 expectType<Equal<Data<typeof unionShow>, SourcesResponse>>();
 expectType<Equal<Data<typeof optionalCount>, SourcesResponse>>();
 expectType<Equal<Data<typeof optionalPage>, SourcesPage>>();
 expectType<Equal<Data<typeof broadInput>, SourcesResponse>>();
-expectType<Equal<Data<typeof widenedCount>, SourcesResponse>>();
 const unionResponse =
   client.archive.distribution.getPublishedSources(unionInput);
 expectType<Equal<Data<typeof unionResponse>, SourcesResponse>>();
@@ -215,6 +204,17 @@ expectType<
   Equal<LaunchpadCollection<number>, z.output<typeof transformedCollection>>
 >();
 
+client.archive.distribution.getPublishedSources({
+  path: archivePath,
+  // @ts-expect-error Upstream documents only the total_size mode.
+  query: { "ws.show": "entries" },
+});
+const widenedInput = {
+  path: archivePath,
+  query: { "ws.show": "total_size" },
+};
+// @ts-expect-error Widened strings do not satisfy the documented literal mode.
+client.request(sourcesOperation, widenedInput);
 client.request(sourcesOperation, {
   path: archivePath,
   // @ts-expect-error Collection options must still satisfy the generated input.
