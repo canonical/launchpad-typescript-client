@@ -15132,6 +15132,243 @@
         ]
       }
     },
+    "/{distribution}/+archive/{archive}?ws.op=getSourcePackageList": {
+      "get": {
+        "tags": [
+          "archive"
+        ],
+        "summary": "Get source package list",
+        "description": "Return a paginated source package listing as JSON. param page:One-based page number. Defaults to 1; must be positive. param page_size: Publications per page. Defaults to 50; must be between 1 and 100. param name:Optional source package name search string. Matching uses containment unless exact_match is True. param exact_match: Match the complete source package name rather than a substring. Defaults to False. param status:A list of PackagePublishingStatus values, passed as strings such as \"Published\" or \"Superseded\" through the API. Omitted or None defaults to Pending and Published. An empty list matches no publications. param ubuntu_change: If True, return only source versions containing \"ubuntu\". If False, exclude that marker. If None, do not filter on the version marker. Defaults to None. param signed_by: Optional IPerson filter matching SourcePackageRelease.signing_key_owner. param maintained_by: Optional IPerson filter matching SourcePackageRelease.maintainer. param distro_series: Optional IDistroSeries filter. param pocket:Optional PackagePublishingPocket filter. param order_by:A sequence of sort keys: \"source_package_name\", \"series\", \"pocket\", \"status\", \"date_created\" or \"date_published\". Prefix a key with \"-\" for descending order. Multiple keys apply in the order given. Series sort by Debian version; pocket and status sort alphabetically by title. Omitted or empty sequences default to newest creation date first. Publication id descending breaks ties. Bare strings are not accepted. param include_binaries: Include unique active binary names and representative publication ids in each source's \"binaries\" list. Include \"binaries_total\", the unique name count before limiting. Defaults to False. May be combined with include_architectures. param include_architectures: Include \"architecture_tag\", \"build_status\" and \"build_web_link\" in each source's \"architectures\" list. Only active binaries whose name matches the source name are considered, using the newest build per architecture. Defaults to False. param binary_names_limit: Maximum unique binaries per source when requested. Defaults to 20; must be between 1 and 100. return:A dict with \"total\", \"total_pages\", \"page\", \"page_size\" and \"sources\". Totals count matching publications, not distinct source names. Each source contains \"id\", \"source_package_name\", \"source_package_version\", \"series\", \"pocket\" and \"status\". Series is its name; pocket and status are readable titles. Requested binaries have \"name\" and \"id\", usable with getBinaryPackageDetails. \"binaries_total\" uses the same active binary filters and is zero when no names match. Unrequested enrichment keys are omitted; requested enrichments with no matches are empty lists. An empty archive returns page 1 with no sources and zero pages. raises ValueError: If pagination or binary limits are invalid. raises InvalidOrderBy: If the sort input is a bare string or a key is not recognized. raises NotFoundError: If the requested page is beyond the results.",
+        "operationId": "archive.distribution.getSourcePackageList",
+        "x-launchpad-naming-path": {
+          "subject": "archive",
+          "namespace": [
+            "distribution"
+          ],
+          "operation": "getSourcePackageList"
+        },
+        "responses": {
+          "200": {
+            "description": "A dict with \"total\", \"total_pages\", \"page\", \"page_size\" and \"sources\". Totals count matching publications, not distinct source names. Each source contains \"id\", \"source_package_name\", \"source_package_version\", \"series\", \"pocket\" and \"status\". Series is its name; pocket and status are readable titles. Requested binaries have \"name\" and \"id\", usable with getBinaryPackageDetails. \"binaries_total\" uses the same active binary filters and is zero when no names match. Unrequested enrichment keys are omitted; requested enrichments with no matches are empty lists. An empty archive returns page 1 with no sources and zero pages."
+          }
+        },
+        "parameters": [
+          {
+            "name": "distribution",
+            "in": "path",
+            "required": true,
+            "description": "The `distribution` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "ubuntu"
+            }
+          },
+          {
+            "name": "archive",
+            "in": "path",
+            "required": true,
+            "description": "The `archive` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "primary"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Page size",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "description": "Source package name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exact_match",
+            "in": "query",
+            "required": false,
+            "description": "Exact name match",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Publication statuses Return only these source publication statuses. Defaults to Pending and Published. An empty list matches nothing.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ubuntu_change",
+            "in": "query",
+            "required": false,
+            "description": "Changed by Ubuntu",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "signed_by",
+            "in": "query",
+            "required": false,
+            "description": "Signed by",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "x-lp-resource-type": "person"
+            }
+          },
+          {
+            "name": "maintained_by",
+            "in": "query",
+            "required": false,
+            "description": "Maintained by",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "x-lp-resource-type": "person"
+            }
+          },
+          {
+            "name": "distro_series",
+            "in": "query",
+            "required": false,
+            "description": "Series",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "x-lp-resource-type": "distro_series"
+            }
+          },
+          {
+            "name": "pocket",
+            "in": "query",
+            "required": false,
+            "description": "Pocket",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Release",
+                "Security",
+                "Updates",
+                "Proposed",
+                "Backports"
+              ]
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "description": "Sort order",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_binaries",
+            "in": "query",
+            "required": false,
+            "description": "Include active binaries Include unique active binary names and publication ids. Defaults to False.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_architectures",
+            "in": "query",
+            "required": false,
+            "description": "Include build architectures Include build details by architecture for active binaries whose name matches the source name. Defaults to False.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "binary_names_limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum binaries per source",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/{distribution}/+archive/{archive}?ws.op=getBinaryPackageDetails": {
+      "get": {
+        "tags": [
+          "archive"
+        ],
+        "summary": "Get binary package details",
+        "description": "Return a binary publication's metadata and artifacts as JSON. Files include active releases of the same binary built from the same source release in this archive, series and pocket across architectures. The selected release's files are included even if that publication is inactive. param binary_id: A BinaryPackagePublishingHistory id belonging to this archive, such as an id from getSourcePackageList's \"binaries\" entries. return:A dict with \"id\", \"binary_package_name\", \"binary_package_version\", \"summary\", \"description\" and \"files\". Each file contains \"filename\", \"size\" in bytes and a webapp-proxied \"url\". Duplicate file aliases are omitted. raises NotFoundError: If the id is unknown or belongs to a publication outside this archive.",
+        "operationId": "archive.distribution.getBinaryPackageDetails",
+        "x-launchpad-naming-path": {
+          "subject": "archive",
+          "namespace": [
+            "distribution"
+          ],
+          "operation": "getBinaryPackageDetails"
+        },
+        "responses": {
+          "200": {
+            "description": "A dict with \"id\", \"binary_package_name\", \"binary_package_version\", \"summary\", \"description\" and \"files\". Each file contains \"filename\", \"size\" in bytes and a webapp-proxied \"url\". Duplicate file aliases are omitted."
+          }
+        },
+        "parameters": [
+          {
+            "name": "distribution",
+            "in": "path",
+            "required": true,
+            "description": "The `distribution` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "ubuntu"
+            }
+          },
+          {
+            "name": "archive",
+            "in": "path",
+            "required": true,
+            "description": "The `archive` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "primary"
+            }
+          },
+          {
+            "name": "binary_id",
+            "in": "query",
+            "required": true,
+            "description": "Binary publication ID",
+            "schema": {
+              "type": "string",
+              "example": "binary_id"
+            }
+          }
+        ]
+      }
+    },
     "/{distribution}/+archive/{archive}?ws.op=getNamedAuthToken": {
       "get": {
         "tags": [
@@ -21419,6 +21656,263 @@
             "schema": {
               "type": "string",
               "example": "ppa"
+            }
+          }
+        ]
+      }
+    },
+    "/{owner}/+archive/{distribution}/{archive}?ws.op=getSourcePackageList": {
+      "get": {
+        "tags": [
+          "archive"
+        ],
+        "summary": "Get source package list",
+        "description": "Return a paginated source package listing as JSON. param page:One-based page number. Defaults to 1; must be positive. param page_size: Publications per page. Defaults to 50; must be between 1 and 100. param name:Optional source package name search string. Matching uses containment unless exact_match is True. param exact_match: Match the complete source package name rather than a substring. Defaults to False. param status:A list of PackagePublishingStatus values, passed as strings such as \"Published\" or \"Superseded\" through the API. Omitted or None defaults to Pending and Published. An empty list matches no publications. param ubuntu_change: If True, return only source versions containing \"ubuntu\". If False, exclude that marker. If None, do not filter on the version marker. Defaults to None. param signed_by: Optional IPerson filter matching SourcePackageRelease.signing_key_owner. param maintained_by: Optional IPerson filter matching SourcePackageRelease.maintainer. param distro_series: Optional IDistroSeries filter. param pocket:Optional PackagePublishingPocket filter. param order_by:A sequence of sort keys: \"source_package_name\", \"series\", \"pocket\", \"status\", \"date_created\" or \"date_published\". Prefix a key with \"-\" for descending order. Multiple keys apply in the order given. Series sort by Debian version; pocket and status sort alphabetically by title. Omitted or empty sequences default to newest creation date first. Publication id descending breaks ties. Bare strings are not accepted. param include_binaries: Include unique active binary names and representative publication ids in each source's \"binaries\" list. Include \"binaries_total\", the unique name count before limiting. Defaults to False. May be combined with include_architectures. param include_architectures: Include \"architecture_tag\", \"build_status\" and \"build_web_link\" in each source's \"architectures\" list. Only active binaries whose name matches the source name are considered, using the newest build per architecture. Defaults to False. param binary_names_limit: Maximum unique binaries per source when requested. Defaults to 20; must be between 1 and 100. return:A dict with \"total\", \"total_pages\", \"page\", \"page_size\" and \"sources\". Totals count matching publications, not distinct source names. Each source contains \"id\", \"source_package_name\", \"source_package_version\", \"series\", \"pocket\" and \"status\". Series is its name; pocket and status are readable titles. Requested binaries have \"name\" and \"id\", usable with getBinaryPackageDetails. \"binaries_total\" uses the same active binary filters and is zero when no names match. Unrequested enrichment keys are omitted; requested enrichments with no matches are empty lists. An empty archive returns page 1 with no sources and zero pages. raises ValueError: If pagination or binary limits are invalid. raises InvalidOrderBy: If the sort input is a bare string or a key is not recognized. raises NotFoundError: If the requested page is beyond the results.",
+        "operationId": "archive.ppa.getSourcePackageList",
+        "x-launchpad-naming-path": {
+          "subject": "archive",
+          "namespace": [
+            "ppa"
+          ],
+          "operation": "getSourcePackageList"
+        },
+        "responses": {
+          "200": {
+            "description": "A dict with \"total\", \"total_pages\", \"page\", \"page_size\" and \"sources\". Totals count matching publications, not distinct source names. Each source contains \"id\", \"source_package_name\", \"source_package_version\", \"series\", \"pocket\" and \"status\". Series is its name; pocket and status are readable titles. Requested binaries have \"name\" and \"id\", usable with getBinaryPackageDetails. \"binaries_total\" uses the same active binary filters and is zero when no names match. Unrequested enrichment keys are omitted; requested enrichments with no matches are empty lists. An empty archive returns page 1 with no sources and zero pages."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "description": "The `owner` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "~launchpad"
+            }
+          },
+          {
+            "name": "distribution",
+            "in": "path",
+            "required": true,
+            "description": "The `distribution` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "ubuntu"
+            }
+          },
+          {
+            "name": "archive",
+            "in": "path",
+            "required": true,
+            "description": "The `archive` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "ppa"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Page size",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "description": "Source package name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exact_match",
+            "in": "query",
+            "required": false,
+            "description": "Exact name match",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Publication statuses Return only these source publication statuses. Defaults to Pending and Published. An empty list matches nothing.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ubuntu_change",
+            "in": "query",
+            "required": false,
+            "description": "Changed by Ubuntu",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "signed_by",
+            "in": "query",
+            "required": false,
+            "description": "Signed by",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "x-lp-resource-type": "person"
+            }
+          },
+          {
+            "name": "maintained_by",
+            "in": "query",
+            "required": false,
+            "description": "Maintained by",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "x-lp-resource-type": "person"
+            }
+          },
+          {
+            "name": "distro_series",
+            "in": "query",
+            "required": false,
+            "description": "Series",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "x-lp-resource-type": "distro_series"
+            }
+          },
+          {
+            "name": "pocket",
+            "in": "query",
+            "required": false,
+            "description": "Pocket",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Release",
+                "Security",
+                "Updates",
+                "Proposed",
+                "Backports"
+              ]
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "description": "Sort order",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_binaries",
+            "in": "query",
+            "required": false,
+            "description": "Include active binaries Include unique active binary names and publication ids. Defaults to False.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_architectures",
+            "in": "query",
+            "required": false,
+            "description": "Include build architectures Include build details by architecture for active binaries whose name matches the source name. Defaults to False.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "binary_names_limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum binaries per source",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/{owner}/+archive/{distribution}/{archive}?ws.op=getBinaryPackageDetails": {
+      "get": {
+        "tags": [
+          "archive"
+        ],
+        "summary": "Get binary package details",
+        "description": "Return a binary publication's metadata and artifacts as JSON. Files include active releases of the same binary built from the same source release in this archive, series and pocket across architectures. The selected release's files are included even if that publication is inactive. param binary_id: A BinaryPackagePublishingHistory id belonging to this archive, such as an id from getSourcePackageList's \"binaries\" entries. return:A dict with \"id\", \"binary_package_name\", \"binary_package_version\", \"summary\", \"description\" and \"files\". Each file contains \"filename\", \"size\" in bytes and a webapp-proxied \"url\". Duplicate file aliases are omitted. raises NotFoundError: If the id is unknown or belongs to a publication outside this archive.",
+        "operationId": "archive.ppa.getBinaryPackageDetails",
+        "x-launchpad-naming-path": {
+          "subject": "archive",
+          "namespace": [
+            "ppa"
+          ],
+          "operation": "getBinaryPackageDetails"
+        },
+        "responses": {
+          "200": {
+            "description": "A dict with \"id\", \"binary_package_name\", \"binary_package_version\", \"summary\", \"description\" and \"files\". Each file contains \"filename\", \"size\" in bytes and a webapp-proxied \"url\". Duplicate file aliases are omitted."
+          }
+        },
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "description": "The `owner` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "~launchpad"
+            }
+          },
+          {
+            "name": "distribution",
+            "in": "path",
+            "required": true,
+            "description": "The `distribution` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "ubuntu"
+            }
+          },
+          {
+            "name": "archive",
+            "in": "path",
+            "required": true,
+            "description": "The `archive` segment of the archive resource URL. Supply the value for the resource you want to access; the example shows one possible value.",
+            "schema": {
+              "type": "string",
+              "example": "ppa"
+            }
+          },
+          {
+            "name": "binary_id",
+            "in": "query",
+            "required": true,
+            "description": "Binary publication ID",
+            "schema": {
+              "type": "string",
+              "example": "binary_id"
             }
           }
         ]
