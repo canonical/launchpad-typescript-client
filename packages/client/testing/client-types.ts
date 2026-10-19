@@ -7,18 +7,18 @@ import {
   type LaunchpadCollection,
   type LaunchpadResource,
   type LaunchpadResponse,
-} from "@canonical/launchpad-typescript-client";
+} from "@canonical/launchpad-client";
 import type {
   Input,
   OperationId,
   Output,
-} from "@canonical/launchpad-typescript-client/contracts";
-import type { Output as QaOutput } from "@canonical/launchpad-typescript-client/contracts/qastaging";
+} from "@canonical/launchpad-client/contracts";
+import type { Output as QaOutput } from "@canonical/launchpad-client/contracts/qastaging";
 import {
   launchpadCollectionSchema,
   launchpadResourceSchema,
-} from "@canonical/launchpad-typescript-client/schemas/primitives";
-import { zProjectGetPath } from "@canonical/launchpad-typescript-client/schemas/operations/project";
+} from "@canonical/launchpad-client/schemas/primitives";
+import { zProjectGetPath } from "@canonical/launchpad-client/schemas/operations/project";
 import { z } from "zod";
 
 type Equal<A, B> =

@@ -1,33 +1,21 @@
 # Launchpad TypeScript client
 
-Requires Node.js 24 or newer. This library is under development and has not been
-published yet.
+Call the Launchpad API from TypeScript with typed requests and lazy pagination.
+The client uses Fetch and supports anonymous, cookie, and OAuth1 authentication.
 
-## Development
+Requires Node.js 24 or newer. This is an ESM package.
+It is still under development.
 
-From the repository root:
+## Install
 
 ```sh
-pnpm install --frozen-lockfile
-npm --prefix packages/client/tooling ci --ignore-scripts
-pnpm --dir packages/client generate
-pnpm --dir packages/client build
-pnpm --dir packages/client test:coverage
-pnpm --dir packages/client typecheck
-pnpm --dir packages/client check
+npm install @canonical/launchpad-client
 ```
 
-The tooling package has a separate npm lockfile and pinned TypeScript compiler.
-Its TypeScript scripts run with Node's native type stripping; `typecheck` also
-checks those scripts explicitly. Vitest runs source tests, while subprocesses
-exercise the real tooling and built package exports. See the
-[generation workflow](tooling/README.md) for how snapshot provenance,
-generator adaptation, and output validation fit together.
-
-## Typed operation requests
+## Make your first request
 
 ```ts
-import { createLaunchpadClient } from "@canonical/launchpad-typescript-client";
+import { createLaunchpadClient } from "@canonical/launchpad-client";
 
 const client = createLaunchpadClient();
 const { data } = await client.project.get({
@@ -36,9 +24,11 @@ const { data } = await client.project.get({
 console.log(data.display_name);
 ```
 
-Operation IDs are imported unchanged from the upstream snapshot. Dotted IDs
-also expose nested methods with the same inputs, options, decoder inference,
-and response wrapper as `request`:
+Use your editor's completion to find operations and their inputs.
+Each request returns `{ data, response }`. `data` is the parsed result.
+`response` contains the HTTP status and headers. Its body has already been read.
+
+You can also call an operation by its ID:
 
 ```ts
 const input = { path: { project: "launchpad" } };
@@ -47,34 +37,52 @@ await client.project.get(input);
 await client.request("project.get", input);
 ```
 
-Only dots declared in an upstream ID define this hierarchy; multiword components
-stay intact. Generation rejects operation/namespace conflicts such as
-`account.get` alongside `account.get.details`, and subjects that would replace
-`request`, `requestRaw`, `pages`, or `items`.
+The methods use Launchpad's operation names. Dots create nested methods;
+multiword names stay intact. Fixed operation arguments, such as `ws.op`, cannot
+be overridden.
 
-The snapshots follow the
-[namespace-first convention](../../docs/adr/0001-namespace-first-naming-paths.md),
-including inherited contexts such as `accessToken.gitRepository.sourcePackage.get`.
-No names or namespaces are guessed by the client. URL segments, field names, and
-wire operation values still come from upstream metadata: `projects.newProject`
-sends `ws.op=new_project`.
+## Choose an API server
 
-Generated operation IDs select input and documented output types. These types do
-not validate responses; supplying `decode` explicitly validates or transforms the
-result and overrides its inferred type. Undocumented outputs remain unknown.
+Requests go to `https://api.launchpad.net/devel/` by default.
+To use qastaging, set `baseUrl`:
 
-Collection operations accept the optional literal `ws.show: "total_size"`.
-Omitting it or passing undefined infers a page; the literal infers a number.
-An optional count selection retains the union. Other values and widened strings
-do not satisfy the generated input types. This applies to nested methods and
-`request`; an explicit decoder still overrides the inferred output. `Output<K>`
-retains the full wire union, while `Output<K, typeof input>` can select the output
-for a particular input.
+```ts
+const qastaging = createLaunchpadClient({
+  baseUrl: "https://api.qastaging.launchpad.net/devel/",
+});
+```
+
+Include the API version in `baseUrl`, not just the hostname.
+
+The client uses qastaging contracts for its types and methods.
+Some operations may not exist in production.
+Changing `baseUrl` changes the destination, not the types.
+
+## Read collections
+
+Collection requests return a page. Pass its `data` to `client.items` to iterate
+through entries across pages:
 
 ```ts
 const path = { distribution: "ubuntu", archive: "primary" };
 const page = await client.archive.distribution.getPublishedSources({ path });
-console.log(page.data.entries);
+
+for await (const entry of client.items(page.data)) {
+  console.log(entry);
+}
+```
+
+Use `client.pages(page.data)` if you need whole pages instead.
+Both iterators follow `next_collection_link`. They fetch the next page only when
+iteration reaches it. Breaking the loop does not fetch another page.
+Malformed pages and link cycles are rejected.
+
+Entries have type `unknown` unless you supply a `decodeEntry` function.
+It runs on the first page and every later page. Its errors pass through unchanged.
+
+To request a count instead of a page, pass the literal `"total_size"`:
+
+```ts
 const count = await client.request("archive.distribution.getPublishedSources", {
   path,
   query: { "ws.show": "total_size" },
@@ -82,93 +90,89 @@ const count = await client.request("archive.distribution.getPublishedSources", {
 const total: number = count.data;
 ```
 
-The root dispatcher uses production contracts. Changing `baseUrl` changes the
-transport destination, not its TypeScript contract. For qastaging-only contracts,
-use `requestRaw` with an explicit qastaging decoder. Paths and absolute resource
-URLs are alternative ways to address an operation; they cannot be combined.
-Fixed operation query arguments cannot be overridden.
+Omit `ws.show` to get a page. A value that might be `"total_size"` produces a
+page-or-number type. Pagination does not request totals automatically.
 
-## Raw requests
+## Validate responses
+
+Typed requests do not validate responses at runtime. Undocumented outputs stay
+`unknown`. To validate a response, pass a `decode` function:
 
 ```ts
-import { createLaunchpadClient } from "@canonical/launchpad-typescript-client";
+import { zProjectGetResponse } from "@canonical/launchpad-client/schemas/operations/project";
 
-const client = createLaunchpadClient();
-const { data, response } = await client.requestRaw({ path: "launchpad" });
-// data is unknown until an explicit decoder is supplied.
+const project = await client.project.get(
+  { path: { project: "launchpad" } },
+  { decode: zProjectGetResponse.parse },
+);
+console.log(project.data.display_name);
+```
+
+A decoder can validate or transform the result. Its return type becomes the type
+of `data`. Importing the client alone does not load Zod.
+
+Schema imports default to qastaging. For production, use
+`@canonical/launchpad-client/schemas/production/operations/project`.
+Explicit qastaging imports use `/schemas/qastaging/operations/project`.
+Resource schemas live under `/schemas/models/`, with the same environment choices.
+
+You can import operation types from the package root or `/contracts`.
+Environment-specific contracts are available at `/contracts/production` and
+`/contracts/qastaging`.
+
+## Authenticate requests
+
+Requests are anonymous by default. For runtime-managed cookies:
+
+```ts
+const cookieClient = createLaunchpadClient({
+  auth: { type: "cookie" },
+});
+```
+
+Cookie mode does not create a cookie jar in Node.js.
+
+For OAuth1, pass `auth: { type: "oauth1", signer }`.
+Your signer receives the serialized `Request`. It returns an `Authorization`
+header value, either directly or as a promise. The client calls it once per
+request, including pagination requests. It does not sign redirects again.
+
+The client does not retry requests or refresh credentials automatically.
+You can supply a custom Fetch implementation through the `fetch` option.
+Native browser Fetch needs no manual binding.
+
+## Make raw requests
+
+Use `requestRaw` to call an API-relative path without an operation contract:
+
+```ts
+const { data: rawData, response } = await client.requestRaw({
+  path: "launchpad",
+});
 console.log(response.status);
 ```
 
-`baseUrl` is the complete API prefix, not just an origin. Initial relative paths
-and absolute resource links must stay within its origin and prefix. Fetch follows
-redirects; redirected destinations are not checked against that boundary.
-Bodies use explicit JSON, form, or native Fetch encoding. Responses retain status
-and headers, but their bodies have already been consumed.
+Raw data has type `unknown` unless you pass `decode` as a request option.
+You can use an absolute `resourceUrl` instead of `path`, but not both.
+Typed operations also accept `resourceUrl` instead of path parameters.
 
-Supplied query fields replace matching parameters in the target URL. Undefined
-fields leave existing parameters unchanged. Query/form scalar numbers must be
-finite; arrays retain JSON encoding.
+Request URLs must stay within the configured API origin and path prefix.
+Fetch follows redirects, but the client does not check their destinations.
 
-Responses are decoded as JSON or UTF-8 text. Binary response bodies are not
-preserved; an opt-in byte-preserving response mode is deferred. Native Fetch
-bodies can still upload binary data without text conversion.
+For request bodies, choose `body.encoding`: `"json"`, `"form"`, or `"native"`.
+Put the body in `body.value`. Native Fetch bodies support binary uploads.
+Responses are parsed as JSON or UTF-8 text. Binary response bytes are not preserved.
 
-Authentication defaults to anonymous. Cookie mode delegates cookie handling to
-the runtime; it does not create a Node cookie jar. OAuth1 uses a caller-supplied
-signer once after serialization of the initial request, not for redirected
-requests. Fetch is injectable and invoked without a receiver, so native browser
-Fetch needs no manual binding. Network and abort failures propagate unchanged;
-HTTP and successful-response decoding failures have distinct error classes.
-No automatic retries or credential refresh are performed.
+Query fields replace matching parameters in the URL. `undefined` leaves them unchanged.
+Query and form arrays use JSON encoding. Scalar numbers must be finite.
 
-## Lazy pagination
+## Handle errors and cancellation
 
-Pass collection `data`, not the `{ data, response }` wrapper, to `client.pages`
-or `client.items`. Both follow `next_collection_link` through the same transport
-and confinement checks. They reject malformed envelopes and link cycles, and
-fetch another page only when iteration advances past the current one.
+Import these errors from `@canonical/launchpad-client`:
 
-Entries remain unknown unless `decodeEntry` is supplied. That decoder applies
-to the first page and every subsequent page; its failures propagate unchanged.
-Breaking iteration does not prefetch another page. No offsets are synthesized
-and no total-size links are fetched automatically.
+- `LaunchpadApiError`: an HTTP error. Read `status`, `headers`, and `body` for details.
+- `LaunchpadDecodeError`: a successful HTTP response that failed JSON parsing or your response decoder.
+  Read `cause` for the original error.
 
-## Generate contracts offline
-
-`generate` consumes the saved snapshots without network requests. It generates
-production and qastaging in separate processes and rejects stale provenance
-hashes. All derived artifacts are ignored by Git under `src/generated/`; run
-`generate` before building a clean checkout or after changing a snapshot.
-
-The generator stays on TypeScript 6.0.3 because the pinned Hey API version is not
-compatible with TypeScript 7 at runtime. The workspace compiler can still check
-the generated output. Contracts retain upstream operation IDs and unknown types;
-no client-side field corrections or response coercion are applied. Generation
-rejects duplicate operation IDs and generated-name collisions with both source
-definitions, rather than silently assigning numeric suffixes.
-
-Contract and schema export paths have production aliases and explicit
-`production`/`qastaging` variants. Import schemas separately when runtime
-validation is required. The root exports types without loading Zod at runtime.
-Schema modules also export inferred types with validator-neutral names, such as
-`PersonFull`, `PersonDiff`, and `PersonPage`. Operation types include role suffixes
-such as `ProjectGetPath` and `ProjectGetResponse`. Runtime schema names use a `z`
-prefix, for example `zPersonFull`.
-
-## Refresh snapshots explicitly
-
-Refreshing invokes the upstream converter and may access the network. It is not
-part of the build or test workflow. From this package directory:
-
-```sh
-pnpm schema:update
-# Limit a refresh to one environment:
-pnpm schema:update --environment qastaging
-# Explicitly select a local upstream checkout instead:
-pnpm schema:update --converter /path/to/launchpad-openapi
-```
-
-By default, refresh uses the npm-published converter pinned in
-`tooling/package.json`. `--converter` explicitly selects a local upstream checkout.
-Production and qastaging outputs are imported verbatim, with the converter version
-and source hash recorded for each snapshot. See [snapshot provenance](schema/README.md).
+Network and abort errors pass through unchanged.
+Pass an `AbortSignal` as `signal` in request or pagination options to cancel work.

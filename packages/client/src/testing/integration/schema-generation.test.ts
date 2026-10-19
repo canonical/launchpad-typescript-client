@@ -11,6 +11,7 @@ import {
   dictionaryOpenApi,
   environmentContractConsumer,
   environmentSchemaConsumer,
+  moduleScopedOperationsOpenApi,
   referencedParameterOpenApi,
 } from "../../../testing/fixtures.ts";
 
@@ -22,7 +23,7 @@ const compiler = fileURLToPath(
 );
 
 describe("schema generation", () => {
-  it("keeps production and qastaging contracts, validators, exports, and provenance separate", async () => {
+  it("defaults to qastaging while keeping environment contracts, schemas, and provenance separate", async () => {
     const root = await createGeneratorProject();
     try {
       execFileSync(process.execPath, ["tooling/generation/run.ts"], {
@@ -45,6 +46,7 @@ describe("schema generation", () => {
           "src",
           "src/generated/production/contracts.ts",
           "src/generated/qastaging/contracts.ts",
+          "src/index.ts",
         ],
         { cwd: root, stdio: "pipe" },
       );
@@ -172,6 +174,69 @@ describe("schema generation", () => {
         "key",
       ]);
       assert.ok(report.operations["dictionary.get"].schemas["request-path"]);
+      assert.equal(await readFile(snapshot, "utf8"), source);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves unnumbered operation schema names across resource modules", async () => {
+    const root = await createGeneratorProject();
+    try {
+      const source = JSON.stringify(moduleScopedOperationsOpenApi);
+      const snapshot = new URL("schema/production/openapi.json", root);
+      await writeFile(snapshot, source);
+      await writeFile(
+        new URL("schema/production/provenance.json", root),
+        JSON.stringify({
+          converter: "@canonical/launchpad-openapi@0.1.4",
+          specSha256: createHash("sha256").update(source).digest("hex"),
+        }),
+      );
+      execFileSync(
+        process.execPath,
+        ["tooling/generation/runEnvironment.ts", "production"],
+        {
+          cwd: root,
+          stdio: "pipe",
+        },
+      );
+      const report: GenerationReport = JSON.parse(
+        await readFile(
+          new URL("src/generated/production/generation.json", root),
+          "utf8",
+        ),
+      );
+      for (const [id, group] of [
+        ["dictionaryEntry.get", "dictionary_entry"],
+        ["dictionary.entry.get", "dictionary"],
+      ]) {
+        assert.deepEqual(report.operations[id].schemas["request-path"], {
+          file: `schemas/operations/${group}.gen.js`,
+          name: "zDictionaryEntryGetPath",
+        });
+        assert.deepEqual(report.operations[id].schemas.responses, {
+          file: `schemas/operations/${group}.gen.js`,
+          name: "zDictionaryEntryGetResponse",
+        });
+      }
+      execFileSync(
+        process.execPath,
+        [
+          compiler,
+          "--noEmit",
+          "--module",
+          "NodeNext",
+          "--target",
+          "ES2023",
+          "--strict",
+          "src/generated/production/contracts.ts",
+        ],
+        {
+          cwd: root,
+          stdio: "pipe",
+        },
+      );
       assert.equal(await readFile(snapshot, "utf8"), source);
     } finally {
       await rm(root, { recursive: true, force: true });

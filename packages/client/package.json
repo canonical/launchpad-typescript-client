@@ -1,5 +1,5 @@
 {
-  "name": "@canonical/launchpad-typescript-client",
+  "name": "@canonical/launchpad-client",
   "version": "0.0.1",
   "license": "LGPL-3.0-only",
   "files": [
@@ -16,8 +16,8 @@
       "default": "./dist/index.js"
     },
     "./contracts": {
-      "types": "./dist/generated/production/contracts.d.ts",
-      "default": "./dist/generated/production/contracts.js"
+      "types": "./dist/generated/qastaging/contracts.d.ts",
+      "default": "./dist/generated/qastaging/contracts.js"
     },
     "./contracts/production": {
       "types": "./dist/generated/production/contracts.d.ts",
@@ -32,12 +32,12 @@
       "default": "./dist/schemas/primitives.js"
     },
     "./schemas/models/*": {
-      "types": "./dist/generated/production/schemas/models/*.gen.d.ts",
-      "default": "./dist/generated/production/schemas/models/*.gen.js"
+      "types": "./dist/generated/qastaging/schemas/models/*.gen.d.ts",
+      "default": "./dist/generated/qastaging/schemas/models/*.gen.js"
     },
     "./schemas/operations/*": {
-      "types": "./dist/generated/production/schemas/operations/*.gen.d.ts",
-      "default": "./dist/generated/production/schemas/operations/*.gen.js"
+      "types": "./dist/generated/qastaging/schemas/operations/*.gen.d.ts",
+      "default": "./dist/generated/qastaging/schemas/operations/*.gen.js"
     },
     "./schemas/production/models/*": {
       "types": "./dist/generated/production/schemas/models/*.gen.d.ts",
@@ -62,7 +62,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "pnpm run clean && tsc -p tsconfig.build.json",
-    "prepack": "pnpm build",
+    "prepack": "pnpm run generate && pnpm run build",
     "generate": "npm --prefix tooling run generate",
     "schema:update": "node tooling/snapshots/refresh.ts",
     "pretest": "pnpm run build && pnpm run test:types",

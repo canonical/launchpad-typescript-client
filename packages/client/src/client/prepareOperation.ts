@@ -1,8 +1,8 @@
 import {
   operations,
   type OperationMetadata,
-} from "../generated/production/operations.js";
-import type { OperationId } from "../generated/production/contracts.js";
+} from "../generated/qastaging/operations.js";
+import type { OperationId } from "../generated/qastaging/contracts.js";
 import assertRecord from "../validation/assertRecord.js";
 import setFields from "../fields/setFields.js";
 import resolveTarget from "../http/resolveTarget.js";

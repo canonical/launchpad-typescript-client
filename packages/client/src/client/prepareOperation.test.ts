@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { invalidOperationInputs } from "../../testing/fixtures.js";
-import type { OperationId } from "../generated/production/contracts.js";
+import type { OperationId } from "../generated/qastaging/contracts.js";
 import prepareOperation from "./prepareOperation.js";
 
 const base = new URL("https://example.test/api/devel/");

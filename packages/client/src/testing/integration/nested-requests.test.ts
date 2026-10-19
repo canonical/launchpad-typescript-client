@@ -20,10 +20,10 @@ describe("nested requests", () => {
     const root = await createGeneratorProject();
     try {
       const source = JSON.stringify(nestedOperationOpenApi);
-      const snapshot = new URL("schema/production/openapi.json", root);
+      const snapshot = new URL("schema/qastaging/openapi.json", root);
       await writeFile(snapshot, source);
       await writeFile(
-        new URL("schema/production/provenance.json", root),
+        new URL("schema/qastaging/provenance.json", root),
         JSON.stringify({
           converter: "@canonical/launchpad-openapi@0.0.6 (local upstream)",
           specSha256: createHash("sha256").update(source).digest("hex"),
@@ -31,7 +31,7 @@ describe("nested requests", () => {
       );
       execFileSync(
         process.execPath,
-        ["tooling/generation/runEnvironment.ts", "production"],
+        ["tooling/generation/runEnvironment.ts", "qastaging"],
         { cwd: root, stdio: "pipe" },
       );
       execFileSync(

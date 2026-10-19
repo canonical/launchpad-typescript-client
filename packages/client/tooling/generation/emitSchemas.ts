@@ -7,39 +7,29 @@ import type {
 } from "../types.ts";
 import bindSchemaSymbols from "./bindSchemaSymbols.ts";
 import configureGenerator from "./configureGenerator.ts";
+import formatOperationSymbolName from "./formatOperationSymbolName.ts";
 
 /**
- * Spell an operation ID the way the pinned parser names its operation symbol.
- *
- * Drops leading characters that cannot start an identifier, replaces other
- * non-identifier characters and `$` or `+` with `-`, then converts the result
- * to camelCase. The parser's own helper for this is not exported.
+ * Reject operation IDs that would share a symbol name within a resource module.
+ * Separate modules may export the same name without ambiguity.
  */
-function formatOperationSymbolName(id: string): string {
-  const sanitized = id
-    .replace(/^[^\p{ID_Start}]+/u, "")
-    .replace(/[^$\u200c\u200d\p{ID_Continue}]/gu, "-")
-    .replace(/[$+]/g, "-");
-  return toCase(sanitized, "camelCase");
-}
-
-/**
- * Reject operation IDs that would share a symbol name. The parser numbers such
- * names before any generator hook can see the collision.
- */
-function validateOperationNames(
-  operations: PreparedGeneration["operations"],
-): void {
+function validateOperationNames({
+  operations,
+  spec,
+}: PreparedGeneration): void {
   const sources = new Map<string, string>();
   for (const [id, operation] of Object.entries(operations)) {
     const name = formatOperationSymbolName(id);
     const source = `${id} (${operation.method} ${operation.sourcePath})`;
-    const previous = sources.get(name);
+    const [, path, method] = operation.sourceLocation;
+    const group = spec.paths[path][method]?.tags?.[0] ?? "shared";
+    const key = `${group}:${name}`;
+    const previous = sources.get(key);
     if (previous !== undefined)
       throw new Error(
         `Conflicting generated symbol ${toCase(name, "PascalCase")}: ${previous} and ${source}`,
       );
-    sources.set(name, source);
+    sources.set(key, source);
   }
 }
 
@@ -59,7 +49,7 @@ export default async function emitSchemas(
   prepared: PreparedGeneration,
   output: URL,
 ): Promise<SchemaBindings> {
-  validateOperationNames(prepared.operations);
+  validateOperationNames(prepared);
   // Keep live symbols: the generator assigns final names after routing files.
   const symbols = new Map<number, CollectedSymbol>();
   await createClient(configureGenerator(prepared, output, symbols));

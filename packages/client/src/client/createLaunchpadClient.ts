@@ -2,8 +2,8 @@ import type {
   Input,
   OperationId,
   Output,
-} from "../generated/production/contracts.js";
-import { operationPaths } from "../generated/production/operations.js";
+} from "../generated/qastaging/contracts.js";
+import { operationPaths } from "../generated/qastaging/operations.js";
 import iteratePages from "./iteratePages.js";
 import createOperationMethods from "./createOperationMethods.js";
 import prepareOperation from "./prepareOperation.js";

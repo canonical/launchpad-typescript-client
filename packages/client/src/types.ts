@@ -9,9 +9,9 @@ import type {
   Input,
   OperationId,
   Output,
-} from "./generated/production/contracts.js";
+} from "./generated/qastaging/contracts.js";
 import type { LaunchpadCollection } from "./schemas/primitives.js";
-import type { operationPaths } from "./generated/production/operations.js";
+import type { operationPaths } from "./generated/qastaging/operations.js";
 
 /** A bound operation with the same input, output, and decoder rules as request(). */
 export interface LaunchpadOperationMethod<K extends OperationId> {

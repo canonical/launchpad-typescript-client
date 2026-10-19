@@ -30,6 +30,24 @@ After these checks, contracts, transport metadata, validators, and the generatio
 report are written under `src/generated/<environment>/`. Temporary generator
 output is removed even if generation fails.
 
+## Packaging a release
+
+Install the development and tooling dependencies first, then run from the client
+package directory:
+
+```sh
+npm pack --dry-run
+npm publish
+```
+
+Both commands run `prepack`: it regenerates contracts, transport metadata, and
+schemas for production and qastaging from the saved snapshots, then compiles a
+clean build. Invalid snapshot provenance, generation errors, or compilation
+errors stop packaging and publishing instead of reusing stale output.
+
+This does not fetch new API definitions or change the saved snapshots. Refresh
+and review snapshots explicitly before releasing if the API contract needs updating.
+
 ## Snapshot refresh
 
 Run `pnpm schema:update` explicitly when the saved contract needs updating. The

@@ -30,7 +30,7 @@ export type {
   OperationId,
   Input,
   Output,
-} from "./generated/production/contracts.js";
+} from "./generated/qastaging/contracts.js";
 export type {
   LaunchpadResource,
   LaunchpadCollection,

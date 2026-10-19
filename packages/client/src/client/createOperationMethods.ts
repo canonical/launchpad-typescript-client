@@ -1,9 +1,9 @@
-import type { OperationPathNamespace } from "../generated/production/operations.js";
+import type { OperationPathNamespace } from "../generated/qastaging/operations.js";
 import type {
   Input,
   OperationId,
   Output,
-} from "../generated/production/contracts.js";
+} from "../generated/qastaging/contracts.js";
 import type {
   BoundOperationPaths,
   LaunchpadClient,

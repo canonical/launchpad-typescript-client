@@ -7,6 +7,8 @@ import type {
   PreparedGeneration,
   SymbolMetadata,
 } from "../types.ts";
+import formatOperationSymbolName from "./formatOperationSymbolName.ts";
+import { isHttpMethod } from "./sourceDocument.ts";
 
 const RESOURCE_SCHEMA_SUFFIX = /-(full|diff|page|json)$/;
 const RESOURCE_GROUP_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -33,6 +35,25 @@ export default function configureGenerator(
     parser: {
       hooks: {
         symbols: {
+          // The parser globally numbers colliding operation names before file
+          // routing. Restore their source spelling; conflicts remain module-local.
+          getName: ({ meta, name }) => {
+            if (meta.resource !== "operation") return;
+            const [, path, method] = meta.path ?? [];
+            if (
+              typeof path !== "string" ||
+              typeof method !== "string" ||
+              !isHttpMethod(method) ||
+              typeof meta.resourceId !== "string" ||
+              !name.startsWith(meta.resourceId)
+            )
+              return;
+            const id = prepared.spec.paths[path]?.[method]?.operationId;
+            if (id === undefined) return;
+            return (
+              formatOperationSymbolName(id) + name.slice(meta.resourceId.length)
+            );
+          },
           getFilePath: (symbol) =>
             routeSymbol(symbol, prepared.groups, symbols),
         },

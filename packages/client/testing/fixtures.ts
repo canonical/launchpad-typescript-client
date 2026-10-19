@@ -56,7 +56,7 @@ registerHooks({
     return nextResolve(specifier, context);
   },
 });
-const { createLaunchpadClient } = await import("@canonical/launchpad-typescript-client");
+const { createLaunchpadClient } = await import("@canonical/launchpad-client");
 const client = createLaunchpadClient({ fetch: async () => Response.json({ ok: true }) });
 assert.deepEqual((await client.requestRaw({ path: "launchpad" })).data, { ok: true });
 const pages = client.pages({ start: 0, entries: ["first"] });
@@ -113,6 +113,33 @@ export const dictionaryOpenApi = {
       },
     },
   },
+};
+
+export const moduleScopedOperationsOpenApi = {
+  ...dictionaryOpenApi,
+  paths: Object.fromEntries(
+    [
+      ["dictionaryEntry.get", "dictionary_entry"],
+      ["dictionary.entry.get", "dictionary"],
+    ].map(([operationId, tag]) => [
+      `/${tag}/{key}`,
+      {
+        get: {
+          ...dictionaryOpenApi.paths["/dictionary"].get,
+          operationId,
+          tags: [tag],
+          parameters: [
+            {
+              name: "key",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+        },
+      },
+    ]),
+  ),
 };
 
 export const referencedParameterOpenApi = {
@@ -192,7 +219,7 @@ registerHooks({
     return nextResolve(specifier, context);
   },
 });
-const { createLaunchpadClient, LaunchpadApiError, LaunchpadDecodeError } = await import("@canonical/launchpad-typescript-client");
+const { createLaunchpadClient, LaunchpadApiError, LaunchpadDecodeError } = await import("@canonical/launchpad-client");
 const fetched = [];
 const signed = [];
 let response;
@@ -248,8 +275,8 @@ assert.equal(fetched.length, before);
 `;
 
 export const nestedRequestTypeConsumer = `
-import { createLaunchpadClient, type LaunchpadClient, type LaunchpadResponse } from "@canonical/launchpad-typescript-client";
-import type { Input, Output } from "@canonical/launchpad-typescript-client/contracts";
+import { createLaunchpadClient, type LaunchpadClient, type LaunchpadResponse } from "@canonical/launchpad-client";
+import type { Input, Output } from "@canonical/launchpad-client/contracts";
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
 type Data<R extends Promise<LaunchpadResponse<unknown>>> = Awaited<R>["data"];
 declare function expectType<T extends true>(): T;
@@ -308,26 +335,39 @@ export const qastagingDictionaryOpenApi = {
 };
 
 export const environmentContractConsumer = `
-import type { Input, Output } from "@canonical/launchpad-typescript-client/contracts/production";
-import type { Output as QaOutput } from "@canonical/launchpad-typescript-client/contracts/qastaging";
-import type { Dictionary } from "@canonical/launchpad-typescript-client/schemas/models/shared";
-import type { Dictionary as QaDictionary } from "@canonical/launchpad-typescript-client/schemas/qastaging/models/shared";
-import type { DictionaryGetResponse } from "@canonical/launchpad-typescript-client/schemas/operations/dictionary";
-import type { DictionaryQaGetResponse } from "@canonical/launchpad-typescript-client/schemas/qastaging/operations/dictionary";
-const production: Output<"dictionary.get"> = { answer: 42 };
+import { createLaunchpadClient, type Output as RootOutput } from "@canonical/launchpad-client";
+import type { Input, Output } from "@canonical/launchpad-client/contracts";
+import type { Output as ProductionOutput } from "@canonical/launchpad-client/contracts/production";
+import type { Output as QaOutput } from "@canonical/launchpad-client/contracts/qastaging";
+import type { Dictionary } from "@canonical/launchpad-client/schemas/models/shared";
+import type { Dictionary as ProductionDictionary } from "@canonical/launchpad-client/schemas/production/models/shared";
+import type { Dictionary as QaDictionary } from "@canonical/launchpad-client/schemas/qastaging/models/shared";
+import type { DictionaryQaGetResponse } from "@canonical/launchpad-client/schemas/operations/dictionary";
+import type { DictionaryGetResponse } from "@canonical/launchpad-client/schemas/production/operations/dictionary";
+const production: ProductionOutput<"dictionary.get"> = { answer: 42 };
 const qastaging: QaOutput<"dictionary.qa.get"> = { answer: "42" };
+const defaultOutput: Output<"dictionary.qa.get"> = qastaging;
+const rootOutput: RootOutput<"dictionary.qa.get"> = defaultOutput;
+const input: Input<"dictionary.qa.get"> = {};
+const client = createLaunchpadClient();
+const nested = client.dictionary.qa.get(input);
+const requested = client.request("dictionary.qa.get", input);
+const nestedOutput: Promise<{ data: QaOutput<"dictionary.qa.get"> }> = nested;
+const requestedOutput: Promise<{ data: QaOutput<"dictionary.qa.get"> }> = requested;
+// @ts-expect-error The root client exposes qastaging, not production-only methods.
+client.dictionary.get({});
+// @ts-expect-error Production operations are not default operations.
+type WrongOperation = Output<"dictionary.get">;
 // @ts-expect-error Production and qastaging retain different value types.
-const wrongProduction: Output<"dictionary.get"> = { answer: "42" };
-// @ts-expect-error Production operations are not qastaging operations.
-type WrongOperation = QaOutput<"dictionary.get">;
-const input: Input<"dictionary.get"> = {};
-const model: Dictionary = production;
-const qaModel: QaDictionary = qastaging;
-const response: DictionaryGetResponse = model;
-const qaResponse: DictionaryQaGetResponse = qaModel;
+const wrongDefault: Output<"dictionary.qa.get"> = production;
+const model: Dictionary = defaultOutput;
+const qaModel: QaDictionary = model;
+const productionModel: ProductionDictionary = production;
+const response: DictionaryQaGetResponse = qaModel;
+const productionResponse: DictionaryGetResponse = productionModel;
 // @ts-expect-error Model aliases must retain their inferred value types.
-const wrongModel: Dictionary = qaModel;
-void [production, qastaging, wrongProduction, input, response, qaResponse, wrongModel];
+const wrongModel: Dictionary = productionModel;
+void [rootOutput, nestedOutput, requestedOutput, wrongDefault, response, productionResponse, wrongModel];
 `;
 
 export const fakeConverterCli = `
@@ -342,12 +382,25 @@ await writeFile(args[args.indexOf("--output") + 1], source);
 
 export const environmentSchemaConsumer = `
 import assert from "node:assert/strict";
-import { zDictionary as legacy } from "@canonical/launchpad-typescript-client/schemas/models/shared";
-import { zDictionary as production } from "@canonical/launchpad-typescript-client/schemas/production/models/shared";
-import { zDictionary as qastaging } from "@canonical/launchpad-typescript-client/schemas/qastaging/models/shared";
-assert.equal(legacy, production);
+import { createLaunchpadClient } from "@canonical/launchpad-client";
+import { zDictionary as defaultSchema } from "@canonical/launchpad-client/schemas/models/shared";
+import { zDictionary as production } from "@canonical/launchpad-client/schemas/production/models/shared";
+import { zDictionary as qastaging } from "@canonical/launchpad-client/schemas/qastaging/models/shared";
+import { zDictionaryQaGetResponse as defaultResponse } from "@canonical/launchpad-client/schemas/operations/dictionary";
+import { zDictionaryQaGetResponse as qaResponse } from "@canonical/launchpad-client/schemas/qastaging/operations/dictionary";
+assert.equal(defaultSchema, qastaging);
+assert.equal(defaultResponse, qaResponse);
 assert.equal(production.safeParse({ answer: 42 }).success, true);
 assert.equal(production.safeParse({ answer: "42" }).success, false);
 assert.equal(qastaging.safeParse({ answer: "42" }).success, true);
 assert.equal(qastaging.safeParse({ answer: 42 }).success, false);
+const urls = [];
+const client = createLaunchpadClient({ fetch: async request => {
+  urls.push(request.url);
+  return Response.json({ answer: "42" });
+}});
+assert.deepEqual((await client.dictionary.qa.get({})).data, { answer: "42" });
+assert.deepEqual((await client.request("dictionary.qa.get", {})).data, { answer: "42" });
+assert.deepEqual(urls, Array(2).fill("https://api.launchpad.net/devel/qa-dictionary"));
+assert.equal(client.dictionary.get, undefined);
 `;
