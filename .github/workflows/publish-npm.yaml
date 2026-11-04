@@ -77,8 +77,9 @@ jobs:
       - run: npm ci --prefix packages/client/tooling
       - run: pnpm --filter @canonical/launchpad-client generate
       - run: node --test .github/scripts/*.test.mjs
+      # Package self-imports in the type tests resolve through dist exports.
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm build
       - run: npm publish --provenance --access public
         working-directory: packages/client
