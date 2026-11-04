@@ -1,0 +1,66 @@
+name: Sync with Launchpad repository
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: launchpad-sync
+  cancel-in-progress: false
+
+jobs:
+  before:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.main.outputs.sha }}
+    steps:
+      - name: Record GitHub main before syncing
+        id: main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  sync:
+    needs: before
+    permissions:
+      contents: write
+      actions: write
+    uses: canonical/launchpad-actions/.github/workflows/sync.yaml@29acf6ef813a528b94ee87f3680ad844cde6ca8f
+    with:
+      source_url: https://git.launchpad.net/~launchpad-committers/launchpad-typescript-client
+
+  publish:
+    needs: [before, sync]
+    if: needs.sync.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      # GITHUB_TOKEN mirror pushes do not generate push workflow runs.
+      - name: Dispatch publishing only when the package manifest changed
+        env:
+          BEFORE: ${{ needs.before.outputs.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$BEFORE" HEAD
+          if ! git diff --quiet "$BEFORE" HEAD -- packages/client/package.json; then
+            gh workflow run publish-npm.yaml --ref main -f before="$BEFORE" -f after="$(git rev-parse HEAD)"
+          fi

@@ -176,3 +176,8 @@ Import these errors from `@canonical/launchpad-client`:
 
 Network and abort errors pass through unchanged.
 Pass an `AbortSignal` as `signal` in request or pagination options to cancel work.
+
+## Publishing
+
+Development stays on Launchpad. See [mirroring and npm publishing](../../docs/publishing.md)
+for the GitHub mirror, version-triggered releases, and npm trusted-publisher setup.

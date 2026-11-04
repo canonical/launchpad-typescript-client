@@ -1,0 +1,84 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+    paths: [packages/client/package.json]
+  workflow_dispatch:
+    inputs:
+      before:
+        description: GitHub main SHA before the sync (also used for retries)
+        type: string
+        required: true
+      after:
+        description: Mirrored main SHA to publish
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main' && github.event.deleted != true
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.version.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check the version across the complete synced range
+        id: version
+        env:
+          BEFORE: ${{ github.event.before || inputs.before }}
+          AFTER: ${{ github.event.after || inputs.after }}
+        run: |
+          set -euo pipefail
+          # Never publish arbitrary commits supplied to a manual dispatch.
+          [[ "$AFTER" =~ ^[a-f0-9]{40}$ ]]
+          git merge-base --is-ancestor "$AFTER" HEAD
+          # The initial mirror establishes a baseline; it is not a release.
+          if [[ "$BEFORE" == '0000000000000000000000000000000000000000' ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(node .github/scripts/version-changed.mjs "$BEFORE" "$AFTER" packages/client/package.json)
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: version
+    if: needs.version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.after || inputs.after }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: "12.6.0"
+          run_install: false
+      # npm >=11.5.1 supports trusted publishing; no NPM_TOKEN is used.
+      - run: npm install --global npm@11
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci --prefix packages/client/tooling
+      - run: pnpm --filter @canonical/launchpad-client generate
+      - run: node --test .github/scripts/*.test.mjs
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: npm publish --provenance --access public
+        working-directory: packages/client
